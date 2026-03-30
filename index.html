@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PaBa (Paham Baca) — Asisten baca adaptif untuk penyandang disleksia dan lansia." />
+  <title>PaBa — Paham Baca</title>
+
+  <!-- =====================================================
+       FONTS
+       - Lora      : Warm, humanist serif — main reading body
+       - DM Sans   : Clean, accessible sans — UI chrome
+       - OpenDyslexic: Loaded via @font-face below (CDN)
+  ====================================================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =========================================================
+       SECTION 1 — CUSTOM FONTS
+       OpenDyslexic is loaded from an open CDN. If offline,
+       swap the src to a local copy placed in /fonts/
+    ========================================================= */
+    @font-face {
+      font-family: 'OpenDyslexic';
+      src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/fonts/OpenDyslexic-Regular.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'OpenDyslexic';
+      src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/fonts/OpenDyslexic-Bold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* =========================================================
+       SECTION 2 — DESIGN TOKENS (CSS Custom Properties)
+       All visual values live here. Change a token, change
+       the entire UI. Follows a warm "parchment editorial" theme.
+    ========================================================= */
+    :root {
+      /* Color Palette */
+      --color-bg:          #F5F0E8;      /* warm parchment */
+      --color-surface:     #FDFAF4;      /* reading pane surface */
+      --color-sidebar:     #EDEAE0;      /* sidebar warm gray */
+      --color-border:      #DDD8CC;      /* subtle dividers */
+      --color-ink:         #2C2416;      /* dark warm brown for text */
+      --color-ink-muted:   #7A6E5F;      /* secondary text */
+      --color-accent:      #C47A3A;      /* amber — brand accent */
+      --color-accent-dark: #9B5D22;      /* hover accent */
+      --color-genz-bg:     #0F0F1A;      /* dark card for Gen-Z mode */
+      --color-genz-text:   #E8E0FF;      /* light lavender text on dark */
+      --color-genz-accent: #7C3AED;      /* electric violet for Gen-Z */
+      --color-genz-pop:    #F0FF44;      /* neon yellow pop */
+      --color-focus:       #2563EB;      /* WCAG-compliant focus ring */
+
+      /* Typography */
+      --font-reading:      'Lora', Georgia, serif;
+      --font-ui:           'DM Sans', system-ui, sans-serif;
+      --font-dyslexic:     'OpenDyslexic', sans-serif;
+
+      /* Current reading font (toggled by JS) */
+      --font-current:      var(--font-reading);
+
+      /* Fluid text scale */
+      --text-xs:    0.75rem;
+      --text-sm:    0.875rem;
+      --text-base:  1rem;
+      --text-lg:    1.125rem;
+      --text-xl:    1.25rem;
+      --text-2xl:   1.5rem;
+      --text-3xl:   1.875rem;
+
+      /* User-controlled reading variables (set by JS sliders) */
+      --reading-size:        1.1rem;     /* default reading font size */
+      --reading-line-height: 1.8;        /* default line height */
+      --reading-letter-spacing: 0.01em; /* default letter spacing */
+
+      /* Spacing */
+      --space-1:  0.25rem;
+      --space-2:  0.5rem;
+      --space-3:  0.75rem;
+      --space-4:  1rem;
+      --space-5:  1.25rem;
+      --space-6:  1.5rem;
+      --space-8:  2rem;
+      --space-10: 2.5rem;
+      --space-12: 3rem;
+      --space-16: 4rem;
+
+      /* Layout */
+      --sidebar-width: 280px;
+      --navbar-height: 64px;
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --shadow-sm: 0 1px 3px rgba(44,36,22,0.08), 0 1px 2px rgba(44,36,22,0.06);
+      --shadow-md: 0 4px 16px rgba(44,36,22,0.10), 0 2px 6px rgba(44,36,22,0.08);
+      --shadow-lg: 0 12px 40px rgba(44,36,22,0.13), 0 4px 12px rgba(44,36,22,0.09);
+
+      /* Transition */
+      --transition-fast:   150ms ease;
+      --transition-normal: 250ms ease;
+      --transition-slow:   400ms ease;
+    }
+
+    /* =========================================================
+       SECTION 3 — RESET & BASE
+       Minimal, intentional reset that preserves useful defaults
+    ========================================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-ink);
+      font-family: var(--font-ui);
+      font-size: var(--text-base);
+      line-height: 1.6;
+      min-height: 100vh;
+      transition: background-color var(--transition-slow), color var(--transition-slow);
+      /* Subtle paper texture using a CSS noise pattern */
+      background-image:
+        radial-gradient(circle at 20% 80%, rgba(196,122,58,0.04) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(196,122,58,0.04) 0%, transparent 50%);
+    }
+
+    /* ---- When OpenDyslexic is active, apply to reading content ---- */
+    body.font-dyslexic .reading-content,
+    body.font-dyslexic .reading-content * {
+      font-family: var(--font-dyslexic) !important;
+      letter-spacing: 0.05em;
+    }
+
+    img { max-width: 100%; height: auto; display: block; }
+    button { cursor: pointer; font-family: inherit; }
+    a { color: var(--color-accent); }
+    a:hover { color: var(--color-accent-dark); }
+
+    /* =========================================================
+       SECTION 4 — ACCESSIBILITY: FOCUS STATES
+       WCAG 2.1 AA requires 3:1 contrast on focus indicators.
+       We use a thick, clearly visible focus ring on all interactive
+       elements. :focus-visible is used to hide outlines for mouse
+       users while keeping them for keyboard navigation.
+    ========================================================= */
+    :focus { outline: 3px solid transparent; }
+    :focus-visible {
+      outline: 3px solid var(--color-focus);
+      outline-offset: 2px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Skip-to-content link — hidden until focused (keyboard nav) */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: var(--space-4);
+      z-index: 9999;
+      background: var(--color-focus);
+      color: #fff;
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      text-decoration: none;
+      font-size: var(--text-sm);
+      transition: top var(--transition-fast);
+    }
+    .skip-link:focus { top: var(--space-4); }
+
+    /* =========================================================
+       SECTION 5 — HEADER / NAVBAR
+       Sticky top bar. Uses Flexbox for logo ↔ nav alignment.
+       RESPONSIVE: Nav collapses to hamburger on mobile.
+    ========================================================= */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: var(--navbar-height);
+      background: var(--color-surface);
+      border-bottom: 1.5px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-8);
+      gap: var(--space-4);
+    }
+
+    /* --- Logo --- */
+    .navbar__logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      text-decoration: none;
+      color: inherit;
+      flex-shrink: 0;
+    }
+    .navbar__logo-mark {
+      width: 38px;
+      height: 38px;
+      background: var(--color-accent);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-family: var(--font-reading);
+      font-weight: 600;
+      font-size: var(--text-lg);
+      letter-spacing: -1px;
+      box-shadow: 0 2px 8px rgba(196,122,58,0.35);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .navbar__logo:hover .navbar__logo-mark {
+      transform: rotate(-5deg) scale(1.05);
+      box-shadow: 0 4px 16px rgba(196,122,58,0.4);
+    }
+    .navbar__logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+    .navbar__logo-text strong {
+      font-family: var(--font-reading);
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--color-ink);
+      letter-spacing: -0.5px;
+    }
+    .navbar__logo-text span {
+      font-size: var(--text-xs);
+      color: var(--color-ink-muted);
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    /* --- Nav Links --- */
+    .navbar__nav {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      list-style: none;
+    }
+    .navbar__nav-link {
+      text-decoration: none;
+      color: var(--color-ink-muted);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-sm);
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+    .navbar__nav-link:hover,
+    .navbar__nav-link[aria-current="page"] {
+      background: var(--color-sidebar);
+      color: var(--color-ink);
+    }
+    .navbar__nav-link--cta {
+      background: var(--color-accent);
+      color: #fff !important;
+      padding: var(--space-2) var(--space-4);
+    }
+    .navbar__nav-link--cta:hover {
+      background: var(--color-accent-dark) !important;
+      color: #fff !important;
+    }
+
+    /* --- Hamburger (mobile only) --- */
+    .navbar__hamburger {
+      display: none; /* shown via media query */
+      background: none;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: var(--space-2);
+      width: 40px;
+      height: 40px;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+    }
+    .navbar__hamburger span {
+      display: block;
+      width: 18px;
+      height: 2px;
+      background: var(--color-ink);
+      border-radius: 2px;
+      transition: transform var(--transition-normal), opacity var(--transition-normal);
+      transform-origin: center;
+    }
+    .navbar__hamburger[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .navbar__hamburger[aria-expanded="true"] span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+    .navbar__hamburger[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* =========================================================
+       SECTION 6 — APP LAYOUT
+       CSS Grid: sidebar | main content
+       RESPONSIVE STRATEGY:
+         - Desktop  (>1024px): 2 columns — fixed sidebar + fluid content
+         - Tablet   (768–1024px): sidebar collapses to top panel / drawer
+         - Mobile   (<768px): single column, sidebar becomes a panel
+    ========================================================= */
+    .app-layout {
+      display: grid;
+      /* Named grid areas for clarity */
+      grid-template-columns: var(--sidebar-width) 1fr;
+      grid-template-areas: "sidebar main";
+      min-height: calc(100vh - var(--navbar-height));
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* =========================================================
+       SECTION 7 — SIDEBAR (Accessibility Controls)
+    ========================================================= */
+    .sidebar {
+      grid-area: sidebar;
+      position: sticky;
+      top: var(--navbar-height);
+      height: calc(100vh - var(--navbar-height));
+      overflow-y: auto;
+      background: var(--color-sidebar);
+      border-right: 1.5px solid var(--color-border);
+      padding: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      /* Custom scrollbar — subtle */
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-border) transparent;
+    }
+    .sidebar::-webkit-scrollbar { width: 5px; }
+    .sidebar::-webkit-scrollbar-track { background: transparent; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 10px; }
+
+    /* Sidebar mobile overlay state */
+    .sidebar--mobile-open {
+      /* Applied via JS on mobile */
+    }
+
+    /* --- Sidebar Section Label --- */
+    .sidebar__section-label {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-ink-muted);
+      padding-bottom: var(--space-2);
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: var(--space-1);
+    }
+
+    /* --- Control Card --- */
+    .control-card {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-4) var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      box-shadow: var(--shadow-sm);
+    }
+    .control-card__title {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--color-ink);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .control-card__icon {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, var(--color-accent), #e8943d);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    /* --- Font Toggle --- */
+    .font-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-2);
+    }
+    .font-toggle__btn {
+      padding: var(--space-2) var(--space-3);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-bg);
+      color: var(--color-ink);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-align: center;
+      transition: all var(--transition-fast);
+      line-height: 1.4;
+    }
+    .font-toggle__btn:hover {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+    .font-toggle__btn.active {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      color: #fff;
+    }
+    .font-toggle__btn .font-sample {
+      display: block;
+      margin-top: 2px;
+      font-weight: 400;
+      opacity: 0.75;
+    }
+
+    /* --- Slider Control --- */
+    .slider-control {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .slider-control__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .slider-control__label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--color-ink-muted);
+    }
+    .slider-control__value {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--color-accent);
+      font-variant-numeric: tabular-nums;
+      background: rgba(196,122,58,0.1);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+    .slider-control__track {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .slider-control__btn {
+      width: 28px;
+      height: 28px;
+      border: 1.5px solid var(--color-border);
+      border-radius: 6px;
+      background: var(--color-bg);
+      color: var(--color-ink);
+      font-size: var(--text-sm);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all var(--transition-fast);
+    }
+    .slider-control__btn:hover {
+      background: var(--color-accent);
+      border-color: var(--color-accent);
+      color: #fff;
+    }
+
+    /* Custom range input styling */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 4px;
+      border-radius: 99px;
+      background: var(--color-border);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-accent);
+      border: 2px solid var(--color-surface);
+      box-shadow: 0 1px 4px rgba(196,122,58,0.4);
+      cursor: pointer;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 2px 8px rgba(196,122,58,0.5);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-accent);
+      border: 2px solid var(--color-surface);
+      cursor: pointer;
+    }
+
+    /* --- Toggle Switch --- */
+    .toggle-switch {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .toggle-switch__label {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--color-ink);
+      flex: 1;
+    }
+    .toggle-switch__sublabel {
+      display: block;
+      font-size: var(--text-xs);
+      font-weight: 400;
+      color: var(--color-ink-muted);
+      margin-top: 1px;
+    }
+    /* The actual checkbox is visually hidden (accessible) */
+    .toggle-switch input[type="checkbox"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-switch__track {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 12px;
+      background: var(--color-border);
+      cursor: pointer;
+      transition: background var(--transition-normal);
+      flex-shrink: 0;
+    }
+    .toggle-switch__track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      transition: transform var(--transition-normal);
+    }
+    .toggle-switch input:checked + .toggle-switch__track {
+      background: var(--color-accent);
+    }
+    .toggle-switch input:checked + .toggle-switch__track::after {
+      transform: translateX(20px);
+    }
+    /* Focus visible on the track when checkbox is focused */
+    .toggle-switch input:focus-visible + .toggle-switch__track {
+      outline: 3px solid var(--color-focus);
+      outline-offset: 2px;
+    }
+
+    /* --- Gen-Z Mode Toggle (special styling) --- */
+    .genz-toggle-card {
+      background: linear-gradient(135deg, #1a0533 0%, #0f0f1a 100%);
+      border: 1.5px solid #7C3AED;
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      position: relative;
+      overflow: hidden;
+    }
+    .genz-toggle-card::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      width: 80px;
+      height: 80px;
+      background: radial-gradient(circle, rgba(124,58,237,0.4) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .genz-toggle-card .toggle-switch__label {
+      color: #E8E0FF;
+    }
+    .genz-toggle-card .toggle-switch__sublabel {
+      color: #a089e0;
+    }
+    .genz-toggle-card .toggle-switch input:checked + .toggle-switch__track {
+      background: var(--color-genz-accent);
+    }
+
+    /* Gen Z sparkle decoration */
+    .genz-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-genz-pop);
+      background: rgba(240,255,68,0.12);
+      border: 1px solid rgba(240,255,68,0.3);
+      padding: 2px 7px;
+      border-radius: 99px;
+      margin-bottom: var(--space-2);
+    }
+
+    /* =========================================================
+       SECTION 8 — MAIN CONTENT AREA
+    ========================================================= */
+    .main-content {
+      grid-area: main;
+      padding: var(--space-8) var(--space-10);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+      min-width: 0; /* prevent overflow in grid */
+    }
+
+    /* --- Article Header --- */
+    .article-header {
+      border-bottom: 1.5px solid var(--color-border);
+      padding-bottom: var(--space-5);
+    }
+    .article-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .article-tag {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-accent);
+      background: rgba(196,122,58,0.1);
+      padding: 3px 10px;
+      border-radius: 99px;
+      border: 1px solid rgba(196,122,58,0.2);
+    }
+    .article-date {
+      font-size: var(--text-xs);
+      color: var(--color-ink-muted);
+    }
+    .article-title {
+      font-family: var(--font-reading);
+      font-size: clamp(var(--text-xl), 3vw, var(--text-3xl));
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--color-ink);
+      letter-spacing: -0.5px;
+      margin-bottom: var(--space-3);
+    }
+    .article-byline {
+      font-size: var(--text-sm);
+      color: var(--color-ink-muted);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .article-byline__avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-accent), #e8943d);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* --- Reading Pane --- */
+    .reading-pane {
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-10) var(--space-12);
+      box-shadow: var(--shadow-md);
+      position: relative;
+    }
+
+    /* The actual reading content — font/size controlled by JS */
+    .reading-content {
+      font-family: var(--font-current);
+      font-size: var(--reading-size);
+      line-height: var(--reading-line-height);
+      letter-spacing: var(--reading-letter-spacing);
+      color: var(--color-ink);
+      transition:
+        font-family var(--transition-slow),
+        font-size var(--transition-normal),
+        line-height var(--transition-normal);
+      max-width: 72ch; /* optimal reading column width */
+    }
+    .reading-content h2 {
+      font-family: var(--font-reading);
+      font-size: 1.25em;
+      font-weight: 600;
+      color: var(--color-ink);
+      margin: 1.5em 0 0.6em;
+      letter-spacing: -0.3px;
+    }
+    .reading-content h2:first-child { margin-top: 0; }
+    .reading-content p {
+      margin-bottom: 1.2em;
+    }
+    .reading-content p:last-child { margin-bottom: 0; }
+    .reading-content strong { font-weight: 700; color: var(--color-accent-dark); }
+    .reading-content em { font-style: italic; }
+    .reading-content blockquote {
+      border-left: 3px solid var(--color-accent);
+      padding-left: var(--space-4);
+      margin: var(--space-5) 0;
+      color: var(--color-ink-muted);
+      font-style: italic;
+    }
+
+    /* Reading progress indicator (visual candy) */
+    .reading-pane__progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 3px;
+      width: 0%;
+      background: linear-gradient(90deg, var(--color-accent), #e8943d);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      transition: width 0.2s ease;
+    }
+
+    /* =========================================================
+       SECTION 9 — GEN-Z MODE CARD
+       Hidden by default. Revealed when the Gen-Z toggle is on.
+       Uses a dark, high-contrast, playful aesthetic to contrast
+       with the calm reading pane above.
+    ========================================================= */
+    .genz-card {
+      /* Hidden state */
+      display: none;
+      opacity: 0;
+      transform: translateY(-12px);
+      transition:
+        opacity var(--transition-slow),
+        transform var(--transition-slow);
+    }
+    /* Visible state — toggled by JS adding .genz-active to body */
+    body.genz-active .genz-card {
+      display: block;
+      animation: genz-enter 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+
+    @keyframes genz-enter {
+      from { opacity: 0; transform: translateY(-16px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .genz-card__inner {
+      background: var(--color-genz-bg);
+      border: 2px solid var(--color-genz-accent);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 0 0 4px rgba(124,58,237,0.15), var(--shadow-lg);
+    }
+    .genz-card__header {
+      background: var(--color-genz-accent);
+      padding: var(--space-3) var(--space-5);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .genz-card__header-icon { font-size: 1.2em; }
+    .genz-card__header-title {
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .genz-card__header-tag {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--color-genz-pop);
+      background: rgba(240,255,68,0.12);
+      border: 1px solid rgba(240,255,68,0.25);
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+    .genz-card__body {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--space-6);
+      padding: var(--space-6);
+      align-items: start;
+    }
+    .genz-card__text-section {}
+    .genz-card__section-label {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-genz-accent);
+      margin-bottom: var(--space-2);
+    }
+    .genz-card__tldr {
+      font-size: var(--text-base);
+      color: var(--color-genz-text);
+      line-height: 1.7;
+      margin-bottom: var(--space-4);
+    }
+    .genz-card__tldr strong {
+      color: var(--color-genz-pop);
+    }
+    .genz-card__mnemonic {
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.35);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+    }
+    .genz-card__mnemonic-title {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--color-genz-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: var(--space-2);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+    }
+    .genz-card__mnemonic-text {
+      font-size: var(--text-sm);
+      color: var(--color-genz-text);
+      line-height: 1.6;
+    }
+    .genz-card__mnemonic-text .highlight {
+      color: var(--color-genz-pop);
+      font-weight: 700;
+    }
+
+    /* Meme image placeholder */
+    .genz-card__meme {
+      width: 180px;
+      flex-shrink: 0;
+    }
+    .genz-card__meme-frame {
+      width: 180px;
+      height: 160px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(15,15,26,0.8) 100%);
+      border: 2px dashed rgba(124,58,237,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2);
+      color: rgba(124,58,237,0.7);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-align: center;
+    }
+    .genz-card__meme-frame .meme-icon {
+      font-size: 2.5rem;
+      filter: grayscale(0.3);
+    }
+    .genz-card__meme-caption {
+      margin-top: var(--space-2);
+      font-size: 10px;
+      color: rgba(232,224,255,0.5);
+      text-align: center;
+      font-style: italic;
+    }
+
+    /* =========================================================
+       SECTION 10 — FOOTER
+    ========================================================= */
+    .app-footer {
+      grid-column: 1 / -1;
+      border-top: 1.5px solid var(--color-border);
+      padding: var(--space-4) var(--space-8);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+      background: var(--color-surface);
+    }
+    .app-footer__copy {
+      font-size: var(--text-xs);
+      color: var(--color-ink-muted);
+    }
+    .app-footer__copy strong {
+      color: var(--color-ink);
+    }
+    .app-footer__links {
+      display: flex;
+      gap: var(--space-4);
+      list-style: none;
+    }
+    .app-footer__links a {
+      font-size: var(--text-xs);
+      color: var(--color-ink-muted);
+      text-decoration: none;
+    }
+    .app-footer__links a:hover { color: var(--color-accent); }
+
+    /* =========================================================
+       SECTION 11 — MOBILE NAV OVERLAY (Drawer)
+       On mobile, the sidebar becomes a slide-in drawer.
+    ========================================================= */
+    .mobile-sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: rgba(44,36,22,0.4);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      opacity: 0;
+      transition: opacity var(--transition-normal);
+    }
+    .mobile-sidebar-overlay.active {
+      opacity: 1;
+    }
+
+    /* =========================================================
+       SECTION 12 — UTILITIES
+    ========================================================= */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: var(--space-1) 0;
+    }
+
+    /* =========================================================
+       SECTION 13 — RESPONSIVE BREAKPOINTS
+       Strategy:
+         1. Desktop-first for the grid layout
+         2. max-width breakpoints for progressive simplification
+         3. Grid area / template changes at each breakpoint
+    ========================================================= */
+
+    /* ---- TABLET: 768px – 1024px ---- */
+    @media (max-width: 1024px) {
+      :root { --sidebar-width: 240px; }
+
+      .navbar { padding: 0 var(--space-5); }
+      .main-content { padding: var(--space-6) var(--space-6); }
+      .reading-pane { padding: var(--space-6) var(--space-8); }
+      .genz-card__body { grid-template-columns: 1fr; }
+      .genz-card__meme { width: 100%; }
+      .genz-card__meme-frame { width: 100%; height: 120px; }
+    }
+
+    /* ---- TABLET / SMALL TABLET: ≤ 768px ---- */
+    @media (max-width: 768px) {
+      .app-layout {
+        /* Collapse to single column */
+        grid-template-columns: 1fr;
+        grid-template-areas: "main";
+      }
+
+      /* Sidebar becomes a fixed drawer */
+      .sidebar {
+        position: fixed;
+        top: var(--navbar-height);
+        left: 0;
+        height: calc(100vh - var(--navbar-height));
+        width: 280px;
+        z-index: 95;
+        transform: translateX(-100%);
+        transition: transform var(--transition-normal);
+        box-shadow: var(--shadow-lg);
+      }
+      .sidebar.sidebar--mobile-open {
+        transform: translateX(0);
+      }
+
+      /* Show hamburger on mobile */
+      .navbar__hamburger { display: flex; }
+
+      /* Hide nav text links on small screens */
+      .navbar__nav { display: none; }
+      .navbar__nav.nav--mobile-open {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        position: absolute;
+        top: var(--navbar-height);
+        left: 0;
+        right: 0;
+        background: var(--color-surface);
+        border-bottom: 1.5px solid var(--color-border);
+        padding: var(--space-3) var(--space-4);
+        box-shadow: var(--shadow-md);
+        z-index: 99;
+      }
+
+      /* Show overlay */
+      .mobile-sidebar-overlay { display: block; }
+
+      .main-content { padding: var(--space-5) var(--space-4); }
+      .reading-pane { padding: var(--space-5) var(--space-5); border-radius: var(--radius-md); }
+      .article-title { font-size: var(--text-xl); }
+      .genz-card__body { padding: var(--space-4); gap: var(--space-4); }
+    }
+
+    /* ---- MOBILE: ≤ 480px ---- */
+    @media (max-width: 480px) {
+      .navbar { padding: 0 var(--space-4); height: 56px; }
+      :root { --navbar-height: 56px; }
+
+      .navbar__logo-text span { display: none; }
+
+      .main-content { padding: var(--space-4) var(--space-3); gap: var(--space-4); }
+      .reading-pane { padding: var(--space-4) var(--space-4); }
+      .reading-content { font-size: calc(var(--reading-size) * 0.9); }
+
+      .article-header { padding-bottom: var(--space-3); }
+      .article-title { font-size: var(--text-lg); }
+
+      .app-footer { flex-direction: column; align-items: flex-start; padding: var(--space-3) var(--space-4); }
+
+      /* On very small screens, meme image hidden to save space */
+      .genz-card__meme { display: none; }
+    }
+
+    /* ---- LARGE DESKTOP: ≥ 1440px ---- */
+    @media (min-width: 1440px) {
+      :root { --sidebar-width: 300px; }
+      .main-content { padding: var(--space-10) var(--space-16); }
+      .reading-pane { padding: var(--space-12) var(--space-16); }
+    }
+
+    /* =========================================================
+       SECTION 14 — REDUCED MOTION
+       Respect user preference for reduced motion (WCAG 2.5.3)
+    ========================================================= */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* =========================================================
+       SECTION 15 — PRINT STYLES
+       Clean printout: hide sidebar, maximize reading pane
+    ========================================================= */
+    @media print {
+      .navbar, .sidebar, .genz-card, .app-footer { display: none !important; }
+      .app-layout { display: block; }
+      .main-content { padding: 0; }
+      .reading-pane { box-shadow: none; border: none; }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- =============================================================
+       ACCESSIBILITY: Skip navigation link
+       Allows keyboard users to bypass nav and jump to main content
+  ============================================================= -->
+  <a href="#main-content" class="skip-link">Lewati ke konten utama</a>
+
+  <!-- Mobile sidebar overlay (tap to close) -->
+  <div
+    class="mobile-sidebar-overlay"
+    id="mobileOverlay"
+    role="presentation"
+    aria-hidden="true"
+  ></div>
+
+  <!-- =============================================================
+       HEADER — Sticky Navbar
+       role="banner" is implicit on <header> but we make it explicit.
+       aria-label differentiates if there are multiple <header> tags.
+  ============================================================= -->
+  <header class="navbar" role="banner">
+
+    <!-- Logo -->
+    <a href="/" class="navbar__logo" aria-label="PaBa Paham Baca — Halaman Utama">
+      <div class="navbar__logo-mark" aria-hidden="true">Pb</div>
+      <div class="navbar__logo-text">
+        <strong>PaBa</strong>
+        <span>Paham Baca</span>
+      </div>
+    </a>
+
+    <!-- Navigation links -->
+    <!-- role="navigation" is implicit on <nav> -->
+    <nav aria-label="Navigasi utama">
+      <ul class="navbar__nav" id="mainNav" role="list">
+        <li><a href="#" class="navbar__nav-link" aria-current="page">Baca</a></li>
+        <li><a href="#" class="navbar__nav-link">Koleksi</a></li>
+        <li><a href="#" class="navbar__nav-link">Bantuan</a></li>
+        <li><a href="#" class="navbar__nav-link navbar__nav-link--cta">Mulai Gratis</a></li>
+      </ul>
+    </nav>
+
+    <!-- Hamburger button (mobile) -->
+    <!-- aria-controls references the sidebar panel on mobile -->
+    <button
+      class="navbar__hamburger"
+      id="sidebarToggleBtn"
+      aria-label="Buka panel pengaturan aksesibilitas"
+      aria-expanded="false"
+      aria-controls="accessibilitySidebar"
+    >
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </button>
+
+  </header>
+
+  <!-- =============================================================
+       MAIN APPLICATION LAYOUT
+       Uses CSS Grid with named areas (see --app-layout rule)
+  ============================================================= -->
+  <div class="app-layout">
+
+    <!-- =========================================================
+         LEFT SIDEBAR — Accessibility Controls
+         role="complementary" for related but secondary content
+         aria-label helps screen reader announce the region
+    ========================================================= -->
+    <aside
+      class="sidebar"
+      id="accessibilitySidebar"
+      role="complementary"
+      aria-label="Panel pengaturan aksesibilitas dan tampilan"
+    >
+
+      <!-- ---- SECTION: Typography ---- -->
+      <div>
+        <p class="sidebar__section-label" aria-hidden="true">Tipografi</p>
+
+        <div class="control-card">
+
+          <!-- Font Toggle -->
+          <div>
+            <p class="control-card__title">
+              <span class="control-card__icon" aria-hidden="true">Aa</span>
+              Pilih Font
+            </p>
+
+            <!-- WCAG: group the two buttons under a fieldset/legend for proper semantics -->
+            <fieldset style="border:none;padding:0;margin:0;">
+              <legend class="sr-only">Pilih jenis huruf untuk konten baca</legend>
+              <div class="font-toggle" role="group">
+                <button
+                  class="font-toggle__btn active"
+                  id="fontStandardBtn"
+                  aria-pressed="true"
+                  onclick="setFont('standard')"
+                >
+                  Standar
+                  <span class="font-sample" style="font-family:'Lora',serif">Aa Bb</span>
+                </button>
+                <button
+                  class="font-toggle__btn"
+                  id="fontDyslexicBtn"
+                  aria-pressed="false"
+                  onclick="setFont('dyslexic')"
+                >
+                  Disleksia
+                  <span class="font-sample" style="font-family:'OpenDyslexic',sans-serif">Aa Bb</span>
+                </button>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Text Size Slider -->
+          <div class="slider-control">
+            <div class="slider-control__header">
+              <label class="slider-control__label" for="fontSizeSlider">
+                Ukuran Teks
+              </label>
+              <span class="slider-control__value" id="fontSizeValue" aria-live="polite">
+                100%
+              </span>
+            </div>
+            <div class="slider-control__track">
+              <button
+                class="slider-control__btn"
+                aria-label="Perkecil ukuran teks"
+                onclick="adjustFontSize(-5)"
+              >A−</button>
+              <input
+                type="range"
+                id="fontSizeSlider"
+                min="80"
+                max="150"
+                value="100"
+                step="5"
+                aria-label="Ukuran teks, 80 persen hingga 150 persen"
+                oninput="syncFontSize(this.value)"
+              />
+              <button
+                class="slider-control__btn"
+                aria-label="Perbesar ukuran teks"
+                onclick="adjustFontSize(5)"
+              >A+</button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Line Height Slider -->
+          <div class="slider-control">
+            <div class="slider-control__header">
+              <label class="slider-control__label" for="lineHeightSlider">
+                Jarak Baris
+              </label>
+              <span class="slider-control__value" id="lineHeightValue" aria-live="polite">
+                1.8×
+              </span>
+            </div>
+            <div class="slider-control__track">
+              <button
+                class="slider-control__btn"
+                aria-label="Kurangi jarak baris"
+                onclick="adjustLineHeight(-0.1)"
+              >−</button>
+              <input
+                type="range"
+                id="lineHeightSlider"
+                min="1.2"
+                max="3.0"
+                value="1.8"
+                step="0.1"
+                aria-label="Jarak baris, dari 1.2 hingga 3.0 kali"
+                oninput="syncLineHeight(this.value)"
+              />
+              <button
+                class="slider-control__btn"
+                aria-label="Tambah jarak baris"
+                onclick="adjustLineHeight(0.1)"
+              >+</button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Letter Spacing Toggle -->
+          <label class="toggle-switch">
+            <span class="toggle-switch__label">
+              Jarak Huruf Lebar
+              <span class="toggle-switch__sublabel">Membantu keterbacaan</span>
+            </span>
+            <input
+              type="checkbox"
+              id="letterSpacingToggle"
+              aria-label="Aktifkan jarak huruf yang lebih lebar"
+              onchange="toggleLetterSpacing(this.checked)"
+            />
+            <span class="toggle-switch__track" aria-hidden="true"></span>
+          </label>
+
+        </div><!-- /control-card -->
+      </div>
+
+      <!-- ---- SECTION: Mode Baca ---- -->
+      <div>
+        <p class="sidebar__section-label" aria-hidden="true">Mode Baca</p>
+
+        <div class="control-card">
+          <!-- High Contrast -->
+          <label class="toggle-switch">
+            <span class="toggle-switch__label">
+              Kontras Tinggi
+              <span class="toggle-switch__sublabel">Cocok untuk lansia</span>
+            </span>
+            <input
+              type="checkbox"
+              id="highContrastToggle"
+              aria-label="Aktifkan mode kontras tinggi"
+              onchange="toggleHighContrast(this.checked)"
+            />
+            <span class="toggle-switch__track" aria-hidden="true"></span>
+          </label>
+
+          <div class="divider"></div>
+
+          <!-- Focus Mode -->
+          <label class="toggle-switch">
+            <span class="toggle-switch__label">
+              Mode Fokus
+              <span class="toggle-switch__sublabel">Sembunyikan distraksi</span>
+            </span>
+            <input
+              type="checkbox"
+              id="focusModeToggle"
+              aria-label="Aktifkan mode fokus"
+              onchange="toggleFocusMode(this.checked)"
+            />
+            <span class="toggle-switch__track" aria-hidden="true"></span>
+          </label>
+        </div>
+
+      </div><!-- /section -->
+
+      <!-- ---- SECTION: MODE GEN-Z (special card) ---- -->
+      <div>
+        <p class="sidebar__section-label" aria-hidden="true">Fitur Spesial</p>
+
+        <div class="genz-toggle-card">
+          <div class="genz-badge" aria-hidden="true">✦ Beta</div>
+
+          <!-- WCAG: the label text clearly describes the control -->
+          <label class="toggle-switch">
+            <span class="toggle-switch__label">
+              MODE GEN-Z 🔥
+              <span class="toggle-switch__sublabel">Penjelasan singkat + meme</span>
+            </span>
+            <input
+              type="checkbox"
+              id="genzModeToggle"
+              aria-label="Aktifkan Mode Gen-Z: tampilkan ringkasan dan meme di bawah artikel"
+              aria-controls="genzCard"
+              onchange="toggleGenzMode(this.checked)"
+            />
+            <span class="toggle-switch__track" aria-hidden="true"></span>
+          </label>
+        </div>
+
+      </div>
+
+    </aside><!-- /sidebar -->
+
+    <!-- =========================================================
+         MAIN CONTENT AREA
+         id="main-content" is the skip-link target
+         role="main" is implicit on <main>
+    ========================================================= -->
+    <main class="main-content" id="main-content" tabindex="-1">
+
+      <!-- Article Header -->
+      <header class="article-header">
+        <div class="article-meta">
+          <span class="article-tag">Sains Kognitif</span>
+          <span class="article-date">
+            <time datetime="2025-06-15">15 Juni 2025</time>
+          </span>
+        </div>
+        <h1 class="article-title">
+          Bagaimana Otak Manusia Memproses Bahasa Tulis:<br />
+          Sebuah Tinjauan Neurosains
+        </h1>
+        <div class="article-byline">
+          <div class="article-byline__avatar" aria-hidden="true">TS</div>
+          <span>Dr. Teguh Santosa · Universitas Indonesia</span>
+        </div>
+      </header>
+
+      <!-- Reading Pane -->
+      <!-- aria-label describes the region; aria-live="polite" lets
+           screen readers announce dynamic font changes without interrupting -->
+      <article
+        class="reading-pane"
+        aria-label="Panel konten bacaan"
+      >
+        <!-- Visual progress bar (decorative) -->
+        <div
+          class="reading-pane__progress-bar"
+          id="readingProgressBar"
+          role="presentation"
+          aria-hidden="true"
+        ></div>
+
+        <!-- The reading content — font/size controlled by CSS variables -->
+        <div class="reading-content" id="readingContent">
+
+          <h2>Pendahuluan: Fenomena Membaca</h2>
+          <p>
+            Membaca adalah salah satu kemampuan kognitif paling kompleks yang dimiliki manusia.
+            Tidak seperti kemampuan berbicara yang bersifat <em>biologis</em> dan berkembang
+            secara alami, membaca adalah <strong>keterampilan buatan</strong> yang harus
+            diajarkan secara eksplisit dan membutuhkan adaptasi neuronal yang signifikan
+            di dalam otak.
+          </p>
+
+          <blockquote>
+            "Otak manusia tidak dilahirkan untuk membaca — ia belajar membaca dengan
+            meminjam sirkuit saraf yang awalnya berevolusi untuk tujuan lain."
+            <br />— Stanislas Dehaene, <em>Reading in the Brain</em> (2009)
+          </blockquote>
+
+          <h2>Jalur Fonologis dan Ortografis</h2>
+          <p>
+            Ketika kita membaca sebuah kata, otak menggunakan dua jalur pemrosesan utama.
+            <strong>Jalur fonologis</strong> mengubah simbol grafis menjadi representasi
+            bunyi, sementara <strong>jalur ortografis</strong> (atau "leksikografis")
+            mengenali pola visual kata secara langsung tanpa melalui rekoding fonetik.
+          </p>
+          <p>
+            Pada pembaca yang terampil, kedua jalur ini bekerja secara simultan dan
+            saling melengkapi. Disfungsi pada jalur fonologis adalah salah satu penanda
+            utama disleksia perkembangan, yang memengaruhi sekitar 10–15% populasi global.
+          </p>
+
+          <h2>Peran Area Broca dan Wernicke</h2>
+          <p>
+            Pemrosesan bahasa tulis melibatkan jaringan kortikal yang luas. <strong>Area
+            Broca</strong> (Brodmann area 44 dan 45) di lobus frontal kiri berperan dalam
+            produksi bahasa dan pemrosesan sintaksis, sedangkan <strong>Area Wernicke</strong>
+            (Brodmann area 22) di lobus temporal kiri dominan untuk pemahaman makna
+            (<em>semantik</em>).
+          </p>
+          <p>
+            Selain kedua area klasik tersebut, penelitian neuroimaging modern menunjukkan
+            keterlibatan penting <em>Visual Word Form Area</em> (VWFA) di sulkus temporal
+            lateral kiri — sering disebut "kotak huruf otak" — yang secara spesifik
+            merespons string huruf yang bermakna, bukan gambar acak.
+          </p>
+
+          <h2>Implikasi untuk Desain Tipografi Aksesibel</h2>
+          <p>
+            Pemahaman neurosains ini memiliki konsekuensi praktis yang langsung. Faktor-faktor
+            seperti <strong>jenis huruf (typeface)</strong>, <strong>ukuran teks</strong>,
+            <strong>jarak antar baris (leading)</strong>, dan <strong>panjang kolom
+            teks</strong> secara nyata mempengaruhi beban kognitif dan kecepatan pemrosesan.
+          </p>
+          <p>
+            Untuk individu dengan disleksia, penggunaan tipografi khusus seperti
+            <em>OpenDyslexic</em> — yang memberikan bobot berbeda pada setiap karakter
+            untuk mengurangi rotasi persepsi — telah menunjukkan hasil yang menjanjikan
+            dalam meningkatkan akurasi dekoding, meski efeknya bervariasi antar individu.
+          </p>
+
+        </div><!-- /reading-content -->
+      </article>
+
+      <!-- =========================================================
+           GEN-Z MODE CARD
+           - Hidden by default (display:none via CSS)
+           - Revealed by body.genz-active class (set by JS)
+           - aria-hidden is toggled dynamically by JS
+           - role="region" + aria-label makes it a landmark
+      ========================================================= -->
+      <section
+        class="genz-card"
+        id="genzCard"
+        role="region"
+        aria-label="Mode Gen-Z: ringkasan dan mnemonic artikel"
+        aria-hidden="true"
+      >
+        <div class="genz-card__inner">
+
+          <div class="genz-card__header">
+            <span class="genz-card__header-icon" aria-hidden="true">⚡</span>
+            <span class="genz-card__header-title">Mode Gen-Z Aktif</span>
+            <span class="genz-card__header-tag" aria-hidden="true">AI-Simplified</span>
+          </div>
+
+          <div class="genz-card__body">
+
+            <div class="genz-card__text-section">
+              <!-- TL;DR Section -->
+              <p class="genz-card__section-label" aria-label="TL;DR — Terlalu panjang, tidak dibaca">
+                TL;DR ✦
+              </p>
+              <p class="genz-card__tldr">
+                Basically, <strong>baca itu bukan skill bawaan lahir 👶</strong> — otak kita
+                harus nge-<em>hack</em> dirinya sendiri buat belajar baca. Ada 2 jalur di otak:
+                satu buat ngubah huruf jadi bunyi, satu lagi buat langsung ngenalin kata.
+                Orang disleksia? <strong>Jalur pertama-nya kurang lancar aja 🧠</strong> — bukan
+                berarti bodoh, cuma beda cara kerjanya. Makanya font khusus + jarak baris lebar
+                bisa bantu banget!
+              </p>
+
+              <!-- Mnemonic Section -->
+              <div class="genz-card__mnemonic" role="note" aria-label="Mnemonic untuk membantu mengingat">
+                <p class="genz-card__mnemonic-title">
+                  <span aria-hidden="true">🔑</span> Mnemonic Biar Gak Lupa
+                </p>
+                <p class="genz-card__mnemonic-text">
+                  Ingat <span class="highlight">"F-O-B"</span>:
+                  <strong style="color:#a089e0">F</strong>onologis (bunyi) →
+                  <strong style="color:#a089e0">O</strong>rtografis (visual) →
+                  <strong style="color:#a089e0">B</strong>roca+Wernicke (makna). Kalau jalur F-nya
+                  bermasalah = disleksia. Solusi? <span class="highlight">Bantu jalur O-nya lebih keras kerja!</span>
+                </p>
+              </div>
+            </div><!-- /text section -->
+
+            <!-- Meme placeholder -->
+            <div class="genz-card__meme" role="img" aria-label="Tempat gambar meme — akan diisi oleh tim konten">
+              <div class="genz-card__meme-frame">
+                <span class="meme-icon" aria-hidden="true">🧠</span>
+                <span>[ Meme Placeholder ]</span>
+                <span style="font-size:9px; margin-top:2px; opacity:0.6">Ganti dengan gambar meme yang relevan</span>
+              </div>
+              <p class="genz-card__meme-caption">
+                <em>"Me explaining neuroscience to my neurons"</em>
+              </p>
+            </div>
+
+          </div><!-- /body -->
+        </div><!-- /inner -->
+      </section><!-- /genz-card -->
+
+    </main><!-- /main-content -->
+
+  </div><!-- /app-layout -->
+
+  <!-- =============================================================
+       FOOTER
+  ============================================================= -->
+  <footer class="app-footer" role="contentinfo">
+    <p class="app-footer__copy">
+      &copy; 2025 <strong>PaBa — Paham Baca</strong>. Dibuat dengan ❤️ untuk semua pembaca.
+    </p>
+    <nav aria-label="Tautan footer">
+      <ul class="app-footer__links" role="list">
+        <li><a href="#">Tentang</a></li>
+        <li><a href="#">Aksesibilitas</a></li>
+        <li><a href="#">Kebijakan Privasi</a></li>
+        <li><a href="#">Kontak</a></li>
+      </ul>
+    </nav>
+  </footer>
+
+
+  <!-- =============================================================
+       JAVASCRIPT
+       Plain JS, no frameworks. Documented inline.
+  ============================================================= -->
+  <script>
+    /* ===========================================================
+       MODULE: STATE
+       A single source of truth for all active settings.
+       This avoids scattered state across multiple variables.
+    =========================================================== */
+    const appState = {
+      fontMode:      'standard',   // 'standard' | 'dyslexic'
+      fontSize:      100,          // percentage, 80–150
+      lineHeight:    1.8,          // multiplier, 1.2–3.0
+      letterSpacing: false,        // boolean
+      highContrast:  false,        // boolean
+      focusMode:     false,        // boolean
+      genzMode:      false,        // boolean
+    };
+
+    /* ===========================================================
+       MODULE: FONT TOGGLE
+       Switches between Lora (standard) and OpenDyslexic.
+       Uses CSS class on <body> which triggers the @font-face rule.
+    =========================================================== */
+    function setFont(mode) {
+      appState.fontMode = mode;
+      const body = document.body;
+      const standardBtn = document.getElementById('fontStandardBtn');
+      const dyslexicBtn = document.getElementById('fontDyslexicBtn');
+
+      if (mode === 'dyslexic') {
+        body.classList.add('font-dyslexic');
+        // WCAG aria-pressed reflects current toggle state
+        standardBtn.classList.remove('active');
+        standardBtn.setAttribute('aria-pressed', 'false');
+        dyslexicBtn.classList.add('active');
+        dyslexicBtn.setAttribute('aria-pressed', 'true');
+      } else {
+        body.classList.remove('font-dyslexic');
+        standardBtn.classList.add('active');
+        standardBtn.setAttribute('aria-pressed', 'true');
+        dyslexicBtn.classList.remove('active');
+        dyslexicBtn.setAttribute('aria-pressed', 'false');
+      }
+
+      persistSettings();
+    }
+
+    /* ===========================================================
+       MODULE: FONT SIZE
+       Updates the CSS custom property --reading-size on :root.
+       This is more performant than style.fontSize because the
+       browser only recalculates descendants that use the variable.
+    =========================================================== */
+    function syncFontSize(value) {
+      const v = parseFloat(value);
+      appState.fontSize = v;
+
+      // Base font size is 1.1rem; we scale it by the percentage
+      const scaledRem = (1.1 * v / 100).toFixed(3);
+      document.documentElement.style.setProperty('--reading-size', `${scaledRem}rem`);
+
+      // Update display value
+      document.getElementById('fontSizeValue').textContent = `${v}%`;
+      // Sync slider if called from buttons
+      document.getElementById('fontSizeSlider').value = v;
+
+      persistSettings();
+    }
+
+    function adjustFontSize(delta) {
+      const newVal = Math.min(150, Math.max(80, appState.fontSize + delta));
+      syncFontSize(newVal);
+    }
+
+    /* ===========================================================
+       MODULE: LINE HEIGHT
+    =========================================================== */
+    function syncLineHeight(value) {
+      const v = parseFloat(value);
+      appState.lineHeight = v;
+
+      document.documentElement.style.setProperty('--reading-line-height', v);
+      document.getElementById('lineHeightValue').textContent = `${v.toFixed(1)}×`;
+      document.getElementById('lineHeightSlider').value = v;
+
+      persistSettings();
+    }
+
+    function adjustLineHeight(delta) {
+      const raw = appState.lineHeight + delta;
+      // Round to 1 decimal to avoid floating point drift
+      const newVal = Math.min(3.0, Math.max(1.2, Math.round(raw * 10) / 10));
+      syncLineHeight(newVal);
+    }
+
+    /* ===========================================================
+       MODULE: LETTER SPACING
+    =========================================================== */
+    function toggleLetterSpacing(enabled) {
+      appState.letterSpacing = enabled;
+      const value = enabled ? '0.07em' : '0.01em';
+      document.documentElement.style.setProperty('--reading-letter-spacing', value);
+      persistSettings();
+    }
+
+    /* ===========================================================
+       MODULE: HIGH CONTRAST
+       Overrides CSS variables with high-contrast values.
+    =========================================================== */
+    function toggleHighContrast(enabled) {
+      appState.highContrast = enabled;
+      const root = document.documentElement;
+
+      if (enabled) {
+        root.style.setProperty('--color-bg',      '#FFFFFF');
+        root.style.setProperty('--color-surface', '#FFFFFF');
+        root.style.setProperty('--color-ink',     '#000000');
+        root.style.setProperty('--color-border',  '#555555');
+        document.body.classList.add('high-contrast');
+      } else {
+        // Restore CSS variable defaults by removing inline overrides
+        root.style.removeProperty('--color-bg');
+        root.style.removeProperty('--color-surface');
+        root.style.removeProperty('--color-ink');
+        root.style.removeProperty('--color-border');
+        document.body.classList.remove('high-contrast');
+      }
+
+      persistSettings();
+    }
+
+    /* ===========================================================
+       MODULE: FOCUS MODE
+       Hides the sidebar and narrows the reading column.
+    =========================================================== */
+    function toggleFocusMode(enabled) {
+      appState.focusMode = enabled;
+      document.body.classList.toggle('focus-mode', enabled);
+
+      // Inject/remove dynamic style for focus mode
+      let focusStyle = document.getElementById('focusModeStyle');
+      if (enabled) {
+        if (!focusStyle) {
+          focusStyle = document.createElement('style');
+          focusStyle.id = 'focusModeStyle';
+          focusStyle.textContent = `
+            @media (min-width: 769px) {
+              .sidebar { opacity: 0.15; pointer-events: none; }
+              .sidebar:hover { opacity: 1; pointer-events: auto; }
+            }
+            .navbar__nav { opacity: 0.3; }
+            .navbar__nav:hover { opacity: 1; }
+          `;
+          document.head.appendChild(focusStyle);
+        }
+      } else {
+        if (focusStyle) focusStyle.remove();
+      }
+
+      persistSettings();
+    }
+
+    /* ===========================================================
+       MODULE: GEN-Z MODE
+       Toggles the special explanation card below the reading pane.
+       Uses CSS class + aria-hidden for accessible show/hide.
+    =========================================================== */
+    function toggleGenzMode(enabled) {
+      appState.genzMode = enabled;
+      const card = document.getElementById('genzCard');
+
+      document.body.classList.toggle('genz-active', enabled);
+      // WCAG: update aria-hidden so screen readers know about the change
+      card.setAttribute('aria-hidden', String(!enabled));
+
+      // Smooth scroll to the card when revealed
+      if (enabled) {
+        // Use a small delay to let the display:block take effect first
+        setTimeout(() => {
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          // Move focus to the card for screen reader users
+          card.setAttribute('tabindex', '-1');
+          card.focus({ preventScroll: true });
+        }, 100);
+      } else {
+        card.removeAttribute('tabindex');
+      }
+
+      persistSettings();
+    }
+
+    /* ===========================================================
+       MODULE: MOBILE SIDEBAR (Hamburger)
+    =========================================================== */
+    const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+    const accessibilitySidebar = document.getElementById('accessibilitySidebar');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+
+    sidebarToggleBtn.addEventListener('click', () => {
+      const isOpen = accessibilitySidebar.classList.contains('sidebar--mobile-open');
+
+      if (isOpen) {
+        closeMobileSidebar();
+      } else {
+        openMobileSidebar();
+      }
+    });
+
+    mobileOverlay.addEventListener('click', closeMobileSidebar);
+
+    function openMobileSidebar() {
+      accessibilitySidebar.classList.add('sidebar--mobile-open');
+      mobileOverlay.classList.add('active');
+      sidebarToggleBtn.setAttribute('aria-expanded', 'true');
+      sidebarToggleBtn.setAttribute('aria-label', 'Tutup panel pengaturan aksesibilitas');
+      mobileOverlay.setAttribute('aria-hidden', 'false');
+      // Trap focus would be ideal here for production; omitted for clarity
+      // Move initial focus into sidebar
+      accessibilitySidebar.querySelector('button, input')?.focus();
+      document.body.style.overflow = 'hidden'; // prevent body scroll behind drawer
+    }
+
+    function closeMobileSidebar() {
+      accessibilitySidebar.classList.remove('sidebar--mobile-open');
+      mobileOverlay.classList.remove('active');
+      sidebarToggleBtn.setAttribute('aria-expanded', 'false');
+      sidebarToggleBtn.setAttribute('aria-label', 'Buka panel pengaturan aksesibilitas');
+      mobileOverlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      sidebarToggleBtn.focus(); // return focus on close
+    }
+
+    // Close sidebar on Escape key (WCAG 2.1 success criterion 1.4.13)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && accessibilitySidebar.classList.contains('sidebar--mobile-open')) {
+        closeMobileSidebar();
+      }
+    });
+
+    /* ===========================================================
+       MODULE: READING PROGRESS BAR
+       Updates the width of the decorative progress bar based on
+       scroll position within the main content area.
+    =========================================================== */
+    const progressBar = document.getElementById('readingProgressBar');
+    const readingPane = document.querySelector('.reading-pane');
+
+    function updateReadingProgress() {
+      if (!progressBar || !readingPane) return;
+      const rect = readingPane.getBoundingClientRect();
+      const totalHeight = rect.height;
+      const viewportHeight = window.innerHeight;
+      // How much of the pane has scrolled past the top of the viewport
+      const scrolled = Math.max(0, -rect.top);
+      const scrollable = Math.max(1, totalHeight - viewportHeight);
+      const progress = Math.min(100, (scrolled / scrollable) * 100);
+      progressBar.style.width = `${progress}%`;
+    }
+
+    window.addEventListener('scroll', updateReadingProgress, { passive: true });
+
+    /* ===========================================================
+       MODULE: PERSIST SETTINGS (localStorage)
+       Saves settings so they survive page refresh.
+    =========================================================== */
+    function persistSettings() {
+      try {
+        localStorage.setItem('paba_settings', JSON.stringify(appState));
+      } catch (e) {
+        // localStorage may be unavailable (private browsing, etc.)
+        // Silently fail — the settings are still applied for this session
+      }
+    }
+
+    function restoreSettings() {
+      try {
+        const saved = localStorage.getItem('paba_settings');
+        if (!saved) return;
+        const settings = JSON.parse(saved);
+
+        if (settings.fontMode === 'dyslexic') setFont('dyslexic');
+        if (settings.fontSize !== undefined)    syncFontSize(settings.fontSize);
+        if (settings.lineHeight !== undefined)  syncLineHeight(settings.lineHeight);
+        if (settings.letterSpacing) {
+          document.getElementById('letterSpacingToggle').checked = true;
+          toggleLetterSpacing(true);
+        }
+        if (settings.highContrast) {
+          document.getElementById('highContrastToggle').checked = true;
+          toggleHighContrast(true);
+        }
+        if (settings.focusMode) {
+          document.getElementById('focusModeToggle').checked = true;
+          toggleFocusMode(true);
+        }
+        if (settings.genzMode) {
+          document.getElementById('genzModeToggle').checked = true;
+          toggleGenzMode(true);
+        }
+      } catch (e) {
+        // Corrupt or missing data — silently ignore
+      }
+    }
+
+    /* ===========================================================
+       INIT: Restore persisted settings on page load
+    =========================================================== */
+    document.addEventListener('DOMContentLoaded', () => {
+      restoreSettings();
+      updateReadingProgress();
+    });
+
+  </script>
+
+</body>
+</html>
