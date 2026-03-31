@@ -110,6 +110,10 @@ const DOM = {
   btnBookmark:      document.getElementById('btn-bookmark'),
   mainContent:      document.getElementById('main-content'),
 
+  // ── Tabs ────────────────────────────────────────────────────
+  tabAll:           document.getElementById('tab-all'),
+  tabSaved:         document.getElementById('tab-saved'),
+
   // ── Toast ──────────────────────────────────────────────────
   toast:            document.getElementById('toast'),
 };
@@ -269,7 +273,7 @@ function persistSavedMaterialsToStorage() {
   localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(state.savedBookmarks));
 }
 
-function saveToBookmark(material) {
+function toggleBookmark(material) {
   const stored = localStorage.getItem(BOOKMARK_STORAGE_KEY);
   let bookmarks = [];
 
@@ -282,18 +286,115 @@ function saveToBookmark(material) {
     }
   }
 
-  if (bookmarks.some((item) => Number(item?.id) === Number(material.id))) {
+  const materialId = Number(material.id);
+  const exists = bookmarks.some((item) => Number(item?.id) === materialId);
+
+  if (exists) {
+    bookmarks = bookmarks.filter((item) => Number(item?.id) !== materialId);
+    state.savedBookmarks = bookmarks;
+    state.savedMaterialIds.delete(materialId);
+    persistSavedMaterialsToStorage();
+    console.log('Berhasil hapus bookmark:', material);
     return false;
   }
 
   bookmarks.push(material);
-  localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(bookmarks));
-
   state.savedBookmarks = bookmarks;
-  state.savedMaterialIds.add(Number(material.id));
-
+  state.savedMaterialIds.add(materialId);
+  persistSavedMaterialsToStorage();
   console.log('Berhasil simpan:', material);
   return true;
+}
+
+function createSavedMaterialCard(material) {
+  const excerpt = String(material.konten_asli || material.konten_genz || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
+
+  return `
+    <article class="saved-card">
+      <div class="saved-card__content">
+        <h3>${escapeHtml(material.judul)}</h3>
+        <p>${escapeHtml(excerpt)}${excerpt.length >= 160 ? '...' : ''}</p>
+      </div>
+      <button
+        type="button"
+        class="saved-card__open-btn"
+        data-material-id="${escapeHtml(String(material.id))}"
+      >
+        Buka Materi
+      </button>
+    </article>
+  `;
+}
+
+function renderBookmarks() {
+  const stored = localStorage.getItem(BOOKMARK_STORAGE_KEY);
+  let bookmarks = [];
+
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) bookmarks = parsed;
+    } catch (err) {
+      console.warn('[PaBa] Gagal membaca bookmark dari localStorage:', err);
+    }
+  }
+
+  state.savedBookmarks = bookmarks.filter((item) => item && Number.isFinite(Number(item.id)));
+  state.savedMaterialIds = new Set(state.savedBookmarks.map((item) => Number(item.id)));
+
+  const savedSectionId = 'saved-materials-section';
+  let savedSection = DOM.mainContent.querySelector(`#${savedSectionId}`);
+  if (!savedSection) {
+    savedSection = document.createElement('section');
+    savedSection.id = savedSectionId;
+    savedSection.className = 'saved-materials-section';
+    DOM.mainContent.appendChild(savedSection);
+  }
+
+  DOM.welcomeState?.setAttribute('hidden', '');
+  DOM.contentView?.setAttribute('hidden', '');
+
+  if (bookmarks.length === 0) {
+    savedSection.innerHTML = `
+      <div class="saved-materials-header">
+        <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
+      </div>
+      <div class="saved-materials-empty">
+        <p>Belum ada materi yang kamu simpan, Guh!</p>
+      </div>
+    `;
+    return;
+  }
+
+  const cards = bookmarks.map(createSavedMaterialCard).join('');
+
+  savedSection.innerHTML = `
+    <div class="saved-materials-header">
+      <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
+      <h2>Materi yang Disimpan</h2>
+    </div>
+    <div class="saved-materials-list">
+      ${cards}
+    </div>
+  `;
+}
+
+function showAllMaterials() {
+  const savedSection = DOM.mainContent.querySelector('#saved-materials-section');
+  if (savedSection) {
+    savedSection.remove();
+  }
+
+  DOM.welcomeState?.toggleAttribute('hidden', state.activeMaterialId !== null);
+  DOM.contentView?.toggleAttribute('hidden', state.activeMaterialId === null);
+
+  state.activeMaterialId = null;
+  updateBookmarkButton();
+  if (DOM.welcomeState) DOM.welcomeState.removeAttribute('hidden');
+  if (DOM.contentView) DOM.contentView.setAttribute('hidden', '');
 }
 
 function isMaterialBookmarked(materialId) {
@@ -308,7 +409,7 @@ function updateBookmarkButton() {
   DOM.btnBookmark.classList.toggle('bookmark-btn--active', isSaved);
   DOM.btnBookmark.setAttribute('aria-pressed', String(isSaved));
   DOM.btnBookmark.textContent = isSaved ? '★ Disimpan' : '☆ Simpan';
-  DOM.btnBookmark.setAttribute('aria-label', isSaved ? 'Hapus materi dari bookmark' : 'Simpan materi ini');
+  DOM.btnBookmark.setAttribute('aria-label', isSaved ? 'Hapus bookmark materi ini' : 'Simpan materi ini');
 }
 
 function getSidebarMaterials(query) {
@@ -615,6 +716,10 @@ function handleMaterialSelect(id) {
     return;
   }
 
+  // Remove bookmark page if it is currently visible
+  const savedSection = DOM.mainContent.querySelector('#saved-materials-section');
+  if (savedSection) savedSection.remove();
+
   // Update state
   state.activeMaterialId = id;
 
@@ -778,12 +883,30 @@ function registerEventListeners() {
     filterMaterials(event.target.value);
   });
 
-  // Bookmark button inside detail view via event delegation on #main-content
+  // Event delegation on #main-content for bookmark button, saved list buttons, and back button
   DOM.mainContent?.addEventListener('click', (event) => {
-    const clickedBookmark = event.target instanceof HTMLElement
-      ? event.target.closest('.bookmark-btn')
-      : null;
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (!target) return;
 
+    const clickedBack = target.closest('.back-to-all-btn');
+    if (clickedBack) {
+      handleTabSwitch('all');
+      showAllMaterials();
+      return;
+    }
+
+    const clickedOpen = target.closest('.saved-card__open-btn');
+    if (clickedOpen) {
+      const materialId = Number(clickedOpen.dataset.materialId);
+      if (Number.isFinite(materialId)) {
+        handleTabSwitch('all');
+        showAllMaterials();
+        handleMaterialSelect(materialId);
+      }
+      return;
+    }
+
+      const clickedBookmark = target.closest('.bookmark-btn');
     if (!clickedBookmark) return;
 
     const materiJson = clickedBookmark.dataset.materi;
@@ -799,19 +922,18 @@ function registerEventListeners() {
 
     if (!material || !Number.isFinite(Number(material.id))) return;
 
-    const saved = saveToBookmark(material);
-    if (saved) {
-      showToast('★ Materi disimpan.');
-    } else {
-      showToast('Materi sudah disimpan.');
-    }
+    const added = toggleBookmark(material);
+    showToast(added ? '★ Materi disimpan.' : '🗑️ Bookmark dibatalkan.');
 
     updateBookmarkButton();
     filterMaterials(DOM.searchInput?.value || '');
   });
 
   DOM.tabAll?.addEventListener('click', () => handleTabSwitch('all'));
-  DOM.tabSaved?.addEventListener('click', () => handleTabSwitch('saved'));
+  DOM.tabSaved?.addEventListener('click', () => {
+    handleTabSwitch('saved');
+    renderBookmarks();
+  });
 
   // ── Keyboard: support arrow keys inside the language toggle ─
   // This makes the segmented control behave like a proper radiogroup
