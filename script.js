@@ -363,7 +363,7 @@ function renderBookmarks() {
         <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
       </div>
       <div class="saved-materials-empty">
-        <p>Belum ada materi yang kamu simpan, Guh!</p>
+        <p>Belum ada materi yang kamu simpan </p>
       </div>
     `;
     return;
