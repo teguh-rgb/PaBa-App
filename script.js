@@ -41,7 +41,7 @@ const SUPABASE_URL      = ' https://xeluoexmhsyuthgnqzuw.supabase.co'
 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbHVvZXhtaHN5dXRoZ25xenV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTcxNjYsImV4cCI6MjA5MDI5MzE2Nn0.vtO9bZopwgEDA5-hfe3sGKHb3g30XLX9LY_uLBMdFFY'; 
 
-const BOOKMARK_STORAGE_KEY = 'paba_saved_materials';
+const BOOKMARK_STORAGE_KEY = 'paba_bookmarks';
 
 /* ============================================================
    02. APPLICATION STATE
@@ -105,6 +105,7 @@ const DOM = {
   btnModeNormal:    document.getElementById('btn-mode-normal'),
   btnModeGenz:      document.getElementById('btn-mode-genz'),
   btnBookmark:      document.getElementById('btn-bookmark'),
+  mainContent:      document.getElementById('main-content'),
 
   // ── Toast ──────────────────────────────────────────────────
   toast:            document.getElementById('toast'),
@@ -743,8 +744,13 @@ function registerEventListeners() {
     filterMaterials(event.target.value);
   });
 
-  // Bookmark button inside detail view
-  DOM.btnBookmark?.addEventListener('click', () => {
+  // Bookmark button inside detail view via event delegation on #main-content
+  DOM.mainContent?.addEventListener('click', (event) => {
+    const clickedBookmark = event.target instanceof HTMLElement
+      ? event.target.closest('.bookmark-btn')
+      : null;
+
+    if (!clickedBookmark) return;
     if (state.activeMaterialId === null) return;
 
     if (isMaterialBookmarked(state.activeMaterialId)) {
@@ -752,7 +758,7 @@ function registerEventListeners() {
       showToast('Bookmark dihapus.');
     } else {
       state.savedMaterialIds.add(state.activeMaterialId);
-      showToast('Materi disimpan.');
+      showToast('★ Materi disimpan.');
     }
 
     persistSavedMaterialsToStorage();
