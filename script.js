@@ -71,6 +71,9 @@ const state = {
   /** @type {Set<number>} IDs of bookmarked materi stored locally */
   savedMaterialIds: new Set(),
 
+  /** @type {Array<Record<string, any>>} Bookmarked materi objects loaded from localStorage */
+  savedBookmarks: [],
+
   /** @type {boolean} Whether the OpenDyslexic font is currently active */
   isDyslexicFont: false,
 };
@@ -255,16 +258,42 @@ function loadSavedMaterialsFromStorage() {
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed)) return;
 
-    state.savedMaterialIds = new Set(parsed
-      .map((id) => Number(id))
-      .filter((id) => Number.isFinite(id)));
+    state.savedBookmarks = parsed.filter((item) => item && Number.isFinite(Number(item.id)));
+    state.savedMaterialIds = new Set(state.savedBookmarks.map((item) => Number(item.id)));
   } catch (err) {
     console.warn('[PaBa] Gagal memuat bookmark dari localStorage:', err);
   }
 }
 
 function persistSavedMaterialsToStorage() {
-  localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify([...state.savedMaterialIds]));
+  localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(state.savedBookmarks));
+}
+
+function saveToBookmark(material) {
+  const stored = localStorage.getItem(BOOKMARK_STORAGE_KEY);
+  let bookmarks = [];
+
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) bookmarks = parsed;
+    } catch (err) {
+      console.warn('[PaBa] Gagal membaca localStorage bookmark:', err);
+    }
+  }
+
+  if (bookmarks.some((item) => Number(item?.id) === Number(material.id))) {
+    return false;
+  }
+
+  bookmarks.push(material);
+  localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(bookmarks));
+
+  state.savedBookmarks = bookmarks;
+  state.savedMaterialIds.add(Number(material.id));
+
+  console.log('Berhasil simpan:', material);
+  return true;
 }
 
 function isMaterialBookmarked(materialId) {
@@ -448,6 +477,11 @@ function renderContent(material) {
 
   // Set the article title
   DOM.contentTitle.textContent = material.judul;
+
+  // Attach the current material object to the bookmark button
+  if (DOM.btnBookmark) {
+    DOM.btnBookmark.dataset.materi = JSON.stringify(material);
+  }
 
   // Render the body text as accessible <p> elements
   DOM.contentBody.innerHTML = formatContentAsParagraphs(rawContent);
@@ -751,17 +785,27 @@ function registerEventListeners() {
       : null;
 
     if (!clickedBookmark) return;
-    if (state.activeMaterialId === null) return;
 
-    if (isMaterialBookmarked(state.activeMaterialId)) {
-      state.savedMaterialIds.delete(state.activeMaterialId);
-      showToast('Bookmark dihapus.');
-    } else {
-      state.savedMaterialIds.add(state.activeMaterialId);
-      showToast('★ Materi disimpan.');
+    const materiJson = clickedBookmark.dataset.materi;
+    if (!materiJson) return;
+
+    let material;
+    try {
+      material = JSON.parse(materiJson);
+    } catch (err) {
+      console.warn('[PaBa] Gagal membaca data materi dari tombol bookmark:', err);
+      return;
     }
 
-    persistSavedMaterialsToStorage();
+    if (!material || !Number.isFinite(Number(material.id))) return;
+
+    const saved = saveToBookmark(material);
+    if (saved) {
+      showToast('★ Materi disimpan.');
+    } else {
+      showToast('Materi sudah disimpan.');
+    }
+
     updateBookmarkButton();
     filterMaterials(DOM.searchInput?.value || '');
   });
