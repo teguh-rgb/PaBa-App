@@ -32,6 +32,17 @@
 
 'use strict';
 
+/* ============================================================
+   IMPORTS — Module Functions
+   ============================================================ */
+import { getSupabaseClient, isSupabaseReady } from './supabase.js';
+import { checkUserStatus } from './auth.js';
+import {
+  toggleBookmark as toggleBookmarkDb,
+  isBookmarked,
+  getUserBookmarks,
+} from './bookmarks.js';
+
 
 /* ============================================================
    01. CONFIGURATION
@@ -39,9 +50,9 @@
    ============================================================ */
 const SUPABASE_URL      = ' https://xeluoexmhsyuthgnqzuw.supabase.co'
 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbHVvZXhtaHN5dXRoZ25xenV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTcxNjYsImV4cCI6MjA5MDI5MzE2Nn0.vtO9bZopwgEDA5-hfe3sGKHb3g30XLX9LY_uLBMdFFY'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbHVvZXhtaHN5dXRoZ25xenV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTcxNjYsImV4cCI6MjA5MDI5MzE2Nn0.vtO9bZopwgEDA5-hfe3sGKHb3g30XLX9LY_uLBMdFFY';
 
-const BOOKMARK_STORAGE_KEY = 'paba_bookmarks';
+// Note: localStorage bookmarks deprecated - now using Supabase database
 
 /* ============================================================
    02. APPLICATION STATE
@@ -254,56 +265,63 @@ function renderMaterialList(materials) {
   DOM.materiList.appendChild(fragment);
 }
 
+/**
+ * Load initial bookmark state from database (called on app startup).
+ * Note: Due to async nature, actual bookmarks loaded dynamically as needed.
+ */
 function loadSavedMaterialsFromStorage() {
-  try {
-    const stored = localStorage.getItem(BOOKMARK_STORAGE_KEY);
-    if (!stored) return;
-
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) return;
-
-    state.savedBookmarks = parsed.filter((item) => item && Number.isFinite(Number(item.id)));
-    state.savedMaterialIds = new Set(state.savedBookmarks.map((item) => Number(item.id)));
-  } catch (err) {
-    console.warn('[PaBa] Gagal memuat bookmark dari localStorage:', err);
-  }
+  // Bookmarks now loaded from database via isBookmarked() and getUserBookmarks()
+  // This function kept for backward compatibility / startup logic
+  console.log('[PaBa] 📦 Bookmark system ready (using Supabase database)');
 }
 
+/**
+ * Persist bookmarks to database.
+ * (No longer needed - database handles persistence)
+ */
 function persistSavedMaterialsToStorage() {
-  localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify(state.savedBookmarks));
+  // Deprecated: all bookmarks now persisted to Supabase database
 }
 
-function toggleBookmark(material) {
-  const stored = localStorage.getItem(BOOKMARK_STORAGE_KEY);
-  let bookmarks = [];
-
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) bookmarks = parsed;
-    } catch (err) {
-      console.warn('[PaBa] Gagal membaca localStorage bookmark:', err);
-    }
+/**
+ * Toggle bookmark status: save or unsave material.
+ * Now uses Supabase database instead of localStorage.
+ * Checks user login status before allowing bookmark operation.
+ *
+ * @param {Object} material - Material object with id property
+ * @returns {Promise<boolean>} true if saved, false if removed, or null if error
+ */
+async function toggleBookmark(material) {
+  if (!material || !Number.isFinite(Number(material.id))) {
+    console.warn('[PaBa] Invalid material object for toggleBookmark');
+    return null;
   }
 
   const materialId = Number(material.id);
-  const exists = bookmarks.some((item) => Number(item?.id) === materialId);
+  console.log('[PaBa] 🔄 Toggling bookmark untuk material:', materialId);
 
-  if (exists) {
-    bookmarks = bookmarks.filter((item) => Number(item?.id) !== materialId);
-    state.savedBookmarks = bookmarks;
-    state.savedMaterialIds.delete(materialId);
-    persistSavedMaterialsToStorage();
-    console.log('Berhasil hapus bookmark:', material);
-    return false;
+  try {
+    const result = await toggleBookmarkDb(materialId);
+
+    if (!result.success) {
+      console.error('[PaBa] ❌ Bookmark toggle failed:', result.message);
+      return null;
+    }
+
+    // Update UI state based on result
+    if (result.isSaved) {
+      state.savedMaterialIds.add(materialId);
+      console.log('[PaBa] ✅ Bookmark saved to database');
+    } else {
+      state.savedMaterialIds.delete(materialId);
+      console.log('[PaBa] ✅ Bookmark removed from database');
+    }
+
+    return result.isSaved;
+  } catch (error) {
+    console.error('[PaBa] ❌ Toggle bookmark exception:', error);
+    return null;
   }
-
-  bookmarks.push(material);
-  state.savedBookmarks = bookmarks;
-  state.savedMaterialIds.add(materialId);
-  persistSavedMaterialsToStorage();
-  console.log('Berhasil simpan:', material);
-  return true;
 }
 
 function createSavedMaterialCard(material) {
@@ -329,21 +347,13 @@ function createSavedMaterialCard(material) {
   `;
 }
 
-function renderBookmarks() {
-  const stored = localStorage.getItem(BOOKMARK_STORAGE_KEY);
-  let bookmarks = [];
-
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) bookmarks = parsed;
-    } catch (err) {
-      console.warn('[PaBa] Gagal membaca bookmark dari localStorage:', err);
-    }
-  }
-
-  state.savedBookmarks = bookmarks.filter((item) => item && Number.isFinite(Number(item.id)));
-  state.savedMaterialIds = new Set(state.savedBookmarks.map((item) => Number(item.id)));
+/**
+ * Render bookmarks from Supabase database.
+ * Fetches user's bookmarks async and displays them with join data from materi table.
+ * Async function to fetch from database.
+ */
+async function renderBookmarks() {
+  console.log('[PaBa] 🔄 Loading bookmarks dari database...');
 
   const savedSectionId = 'saved-materials-section';
   let savedSection = DOM.mainContent.querySelector(`#${savedSectionId}`);
@@ -357,29 +367,59 @@ function renderBookmarks() {
   DOM.welcomeState?.setAttribute('hidden', '');
   DOM.contentView?.setAttribute('hidden', '');
 
-  if (bookmarks.length === 0) {
+  try {
+    // Fetch bookmarks from database
+    const bookmarks = await getUserBookmarks();
+
+    if (!bookmarks || bookmarks.length === 0) {
+      console.log('[PaBa] ℹ️  No bookmarks found');
+      savedSection.innerHTML = `
+        <div class="saved-materials-header">
+          <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
+        </div>
+        <div class="saved-materials-empty">
+          <p>Belum ada materi yang kamu simpan</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Update state with bookmark IDs for quick lookup
+    state.savedBookmarks = bookmarks;
+    state.savedMaterialIds = new Set(bookmarks.map((item) => item.material_id));
+
+    console.log('[PaBa] ✅ Loaded', bookmarks.length, 'bookmarks');
+
+    // Transform bookmark objects to material format for card rendering
+    const materials = bookmarks.map((bookmark) => ({
+      id: bookmark.materi?.id || bookmark.material_id,
+      judul: bookmark.materi?.judul || 'Untitled',
+      konten_asli: bookmark.materi?.konten_asli || '',
+      konten_genz: bookmark.materi?.konten_genz || '',
+    }));
+
+    const cards = materials.map(createSavedMaterialCard).join('');
+
+    savedSection.innerHTML = `
+      <div class="saved-materials-header">
+        <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
+        <h2>Materi yang Disimpan (${bookmarks.length})</h2>
+      </div>
+      <div class="saved-materials-list">
+        ${cards}
+      </div>
+    `;
+  } catch (error) {
+    console.error('[PaBa] ❌ Error loading bookmarks:', error);
     savedSection.innerHTML = `
       <div class="saved-materials-header">
         <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
       </div>
       <div class="saved-materials-empty">
-        <p>Belum ada materi yang kamu simpan </p>
+        <p>❌ Gagal memuat bookmark. Coba lagi nanti.</p>
       </div>
     `;
-    return;
   }
-
-  const cards = bookmarks.map(createSavedMaterialCard).join('');
-
-  savedSection.innerHTML = `
-    <div class="saved-materials-header">
-      <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
-      <h2>Materi yang Disimpan</h2>
-    </div>
-    <div class="saved-materials-list">
-      ${cards}
-    </div>
-  `;
 }
 
 function showAllMaterials() {
@@ -397,8 +437,28 @@ function showAllMaterials() {
   if (DOM.contentView) DOM.contentView.setAttribute('hidden', '');
 }
 
+/**
+ * Check if material is bookmarked.
+ * First checks local state cache, then queries database if needed.
+ * For real-time accuracy, consider using isBookmarked() from bookmarks.js
+ *
+ * @param {number} materialId - Material ID to check
+ * @returns {boolean} true if bookmarked
+ */
 function isMaterialBookmarked(materialId) {
+  // Quick local check first (populated from database)
   return state.savedMaterialIds.has(materialId);
+}
+
+/**
+ * Async check bookmark status from database.
+ * Use this when you need real-time verification.
+ *
+ * @param {number} materialId - Material ID to check
+ * @returns {Promise<boolean>} true if bookmarked
+ */
+async function isMaterialBookmarkedAsync(materialId) {
+  return await isBookmarked(materialId);
 }
 
 function updateBookmarkButton() {
@@ -922,17 +982,32 @@ function registerEventListeners() {
 
     if (!material || !Number.isFinite(Number(material.id))) return;
 
-    const added = toggleBookmark(material);
-    showToast(added ? '★ Materi disimpan.' : '🗑️ Bookmark dibatalkan.');
+    // Handle async toggle bookmark
+    (async () => {
+      clickedBookmark.disabled = true;
+      clickedBookmark.textContent = '⏳ Menyimpan...';
 
-    updateBookmarkButton();
-    filterMaterials(DOM.searchInput?.value || '');
+      const added = await toggleBookmark(material);
+
+      clickedBookmark.disabled = false;
+
+      if (added === true) {
+        showToast('★ Materi disimpan.');
+      } else if (added === false) {
+        showToast('🗑️ Bookmark dibatalkan.');
+      } else {
+        showToast('❌ Gagal mengubah bookmark.');
+      }
+
+      updateBookmarkButton();
+      filterMaterials(DOM.searchInput?.value || '');
+    })();
   });
 
   DOM.tabAll?.addEventListener('click', () => handleTabSwitch('all'));
-  DOM.tabSaved?.addEventListener('click', () => {
+  DOM.tabSaved?.addEventListener('click', async () => {
     handleTabSwitch('saved');
-    renderBookmarks();
+    await renderBookmarks();
   });
 
   // ── Keyboard: support arrow keys inside the language toggle ─
