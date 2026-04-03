@@ -104,6 +104,34 @@
       </div>
 
     </div><!-- /.header-controls -->
+
+    <!-- ── User Auth Controls ─────────────────────────────────
+         Show Login button if not authenticated (Logout hidden).
+         Show Logout button if authenticated (Login hidden).
+         aria-label describes each button's purpose for AT.
+    ─────────────────────────────────────────────────── -->
+    <div class="header-user-controls" role="toolbar" aria-label="Kontrol autentikasi pengguna">
+      <a
+        id="btn-login"
+        href="login.html"
+        class="user-btn user-btn--login"
+        role="button"
+        aria-label="Masuk ke akun Anda"
+      >
+        🔑 Login
+      </a>
+      <button
+        id="btn-logout"
+        class="user-btn user-btn--logout"
+        type="button"
+        aria-label="Keluar dari akun Anda"
+        hidden
+      >
+        👋 Logout
+      </button>
+      <span id="user-email-display" class="user-email-display" hidden></span>
+    </div>
+
   </header><!-- /.app-header -->
 
 

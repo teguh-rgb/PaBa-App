@@ -36,7 +36,7 @@
    IMPORTS — Module Functions
    ============================================================ */
 import { getSupabaseClient, isSupabaseReady } from './supabase.js';
-import { checkUserStatus } from './auth.js';
+import { checkUserStatus, signOut } from './auth.js';
 import {
   toggleBookmark as toggleBookmarkDb,
   isBookmarked,
@@ -87,6 +87,12 @@ const state = {
 
   /** @type {boolean} Whether the OpenDyslexic font is currently active */
   isDyslexicFont: false,
+
+  /** @type {boolean} Whether user is authenticated */
+  isLoggedIn: false,
+
+  /** @type {string|null} Current user's email */
+  userEmail: null,
 };
 
 
@@ -120,6 +126,11 @@ const DOM = {
   btnModeGenz:      document.getElementById('btn-mode-genz'),
   btnBookmark:      document.getElementById('btn-bookmark'),
   mainContent:      document.getElementById('main-content'),
+
+  // ── User Auth ─────────────────────────────────────────────
+  btnLogin:         document.getElementById('btn-login'),
+  btnLogout:        document.getElementById('btn-logout'),
+  userEmailDisplay: document.getElementById('user-email-display'),
 
   // ── Tabs ────────────────────────────────────────────────────
   tabAll:           document.getElementById('tab-all'),
@@ -209,6 +220,119 @@ async function fetchMaterials() {
     console.error('[PaBa] Failed to fetch materials:', err.message);
     showSidebarState('error', `Gagal memuat materi: ${err.message}`);
   }
+}
+
+
+/* ============================================================
+   05.5 AUTHENTICATION MANAGEMENT
+   Handle user login status, display auth UI, logout.
+   ============================================================ */
+
+/**
+ * Check user login status and update UI accordingly.
+ * Calls checkUserStatus() from auth.js.
+ * Updates state.isLoggedIn and state.userEmail.
+ * Shows/hides login/logout buttons based on auth status.
+ *
+ * @returns {Promise<void>}
+ */
+async function checkUserLoginStatus() {
+  console.log('[PaBa] 🔐 Checking user login status...');
+
+  try {
+    const { isLoggedIn, user } = await checkUserStatus();
+
+    state.isLoggedIn = isLoggedIn;
+    state.userEmail = user?.email || null;
+
+    console.log(
+      '[PaBa] ✅ Auth status:',
+      isLoggedIn ? `Logged in as ${user?.email}` : 'Not logged in'
+    );
+
+    updateUIForAuthStatus();
+  } catch (error) {
+    console.error('[PaBa] ❌ Error checking user status:', error);
+    state.isLoggedIn = false;
+    state.userEmail = null;
+    updateUIForAuthStatus();
+  }
+}
+
+/**
+ * Update UI to reflect current authentication status.
+ * Show Login button if not authenticated.
+ * Show Logout button + email if authenticated.
+ */
+function updateUIForAuthStatus() {
+  if (!DOM.btnLogin || !DOM.btnLogout || !DOM.userEmailDisplay) {
+    console.warn('[PaBa] ⚠️  Auth UI elements not found in DOM');
+    return;
+  }
+
+  if (state.isLoggedIn) {
+    // User is logged in: show logout + email, hide login
+    DOM.btnLogin.hidden = true;
+    DOM.btnLogout.hidden = false;
+    DOM.userEmailDisplay.hidden = false;
+    DOM.userEmailDisplay.textContent = state.userEmail || 'User';
+
+    console.log('[PaBa] 👤 Showing logout button for:', state.userEmail);
+  } else {
+    // User is not logged in: show login, hide logout + email
+    DOM.btnLogin.hidden = false;
+    DOM.btnLogout.hidden = true;
+    DOM.userEmailDisplay.hidden = true;
+    DOM.userEmailDisplay.textContent = '';
+
+    console.log('[PaBa] 🔑 Showing login button');
+  }
+}
+
+/**
+ * Handle logout action.
+ * Calls signOut() from auth.js which redirects to login.html.
+ */
+async function handleLogout() {
+  console.log('[PaBa] 👋 Logging out user...');
+
+  if (!confirm('Yakin ingin keluar dari akun?')) {
+    console.log('[PaBa] Logout dibatalkan user');
+    return;
+  }
+
+  try {
+    await signOut();
+    // signOut() in auth.js will redirect to login.html
+    console.log('[PaBa] ✅ Logout successful');
+  } catch (error) {
+    console.error('[PaBa] ❌ Logout error:', error);
+    alert('❌ Gagal logout. Coba lagi.');
+  }
+}
+
+/**
+ * Ensure user is logged in before performing action.
+ * If not logged in, show alert and redirect to login.html.
+ * Used before bookmark operations.
+ *
+ * @returns {Promise<boolean>} true if logged in, false otherwise
+ */
+async function ensureUserLoggedIn() {
+  if (state.isLoggedIn) {
+    return true;
+  }
+
+  // User not logged in - show friendly alert
+  alert(
+    '🔐 Untuk menyimpan bookmark, silakan login terlebih dahulu.\n\nAnda akan diarahkan ke halaman login.'
+  );
+
+  // Redirect to login.html
+  console.log('[PaBa] 🔑 Redirecting to login...');
+  window.location.href = 'login.html';
+
+  return false;
 }
 
 
@@ -982,8 +1106,13 @@ function registerEventListeners() {
 
     if (!material || !Number.isFinite(Number(material.id))) return;
 
-    // Handle async toggle bookmark
+    // Handle async toggle bookmark with login check
     (async () => {
+      // Ensure user is logged in first
+      if (!(await ensureUserLoggedIn())) {
+        return; // User redirected to login page
+      }
+
       clickedBookmark.disabled = true;
       clickedBookmark.textContent = '⏳ Menyimpan...';
 
@@ -1009,6 +1138,9 @@ function registerEventListeners() {
     handleTabSwitch('saved');
     await renderBookmarks();
   });
+
+  // ── User Auth Controls ─────────────────────────────────────
+  DOM.btnLogout?.addEventListener('click', handleLogout);
 
   // ── Keyboard: support arrow keys inside the language toggle ─
   // This makes the segmented control behave like a proper radiogroup
@@ -1053,8 +1185,11 @@ async function initApp() {
   // Step 2: Attach all event listeners.
   registerEventListeners();
 
-  // Step 3: Fetch materials from Supabase and render the sidebar.
-  await fetchMaterials();
+  // Step 3: Check user login status and fetch materials (parallel)
+  await Promise.all([
+    checkUserLoginStatus(),
+    fetchMaterials(),
+  ]);
 
   console.log('[PaBa] Initialization complete.');
 }
