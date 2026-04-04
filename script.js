@@ -194,21 +194,56 @@ async function fetchMaterials() {
   showSidebarState('loading');
 
   try {
+    console.log('[PaBa] 🔄 Fetching materials from Supabase...');
+    console.log('[PaBa] 🔐 User authenticated:', state.isLoggedIn);
+
     const { data, error } = await supabaseClient
       .from('materi')
       .select('id, judul, konten_asli, konten_genz, kategori, url_meme')
       .order('id', { ascending: true });
 
     // Supabase returns errors as JS objects, not thrown exceptions
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error('[PaBa] ❌ Supabase error:', error);
+      console.error('     Error code:', error.code);
+      console.error('     Error message:', error.message);
+      console.error('     Error details:', error.details);
+
+      // Detect specific error types
+      let userMessage = '';
+      let debugInfo = '';
+
+      if (error.code === 'PGRST116' || error.message?.includes('not found')) {
+        userMessage = '❌ Tabel materi tidak ditemukan di database.';
+        debugInfo = 'Table "materi" does not exist. Please check Supabase schema.';
+      } else if (error.message?.includes('permission') || error.code === 'PGRST109') {
+        userMessage = '❌ Akses ditolak. Periksa RLS policy di Supabase dashboard.';
+        debugInfo = 'RLS Policy Error: Check table "materi" RLS policies in Supabase dashboard.\n' +
+                    'Table should allow public SELECT or add appropriate RLS policies.';
+      } else if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        userMessage = '❌ Autentikasi diperlukan. Silakan login terlebih dahulu.';
+        debugInfo = 'Authentication error: User session may have expired.';
+      } else if (error.message?.includes('CORS') || error.message?.includes('Network')) {
+        userMessage = '❌ Gagal terhubung ke server. Periksa koneksi internet Anda.';
+        debugInfo = 'Network/CORS Error: Check Site URL in Supabase settings.';
+      } else {
+        userMessage = `❌ Gagal memuat materi: ${error.message}`;
+        debugInfo = error.message;
+      }
+
+      console.error('[PaBa] Debug Info:', debugInfo);
+      throw new Error(userMessage);
+    }
 
     if (!data || data.length === 0) {
+      console.log('[PaBa] ℹ️  No materials found');
       showSidebarState('empty');
       return;
     }
 
-    // Persist to state
+    // Success: Persist to state
     state.materials = data;
+    console.log('[PaBa] ✅ Materials loaded:', data.length, 'items');
 
     // Render the initial sidebar list according to the current tab and search query.
     filterMaterials(DOM.searchInput?.value || '');
@@ -216,8 +251,9 @@ async function fetchMaterials() {
     await fetchCategories();
 
   } catch (err) {
-    console.error('[PaBa] Failed to fetch materials:', err.message);
-    showSidebarState('error', `Gagal memuat materi: ${err.message}`);
+    console.error('[PaBa] ❌ Failed to fetch materials:', err.message);
+    console.error('[PaBa] 📋 Stack:', err.stack);
+    showSidebarState('error', err.message);
   }
 }
 
@@ -226,6 +262,43 @@ async function fetchMaterials() {
    05.5 AUTHENTICATION MANAGEMENT
    Handle user login status, display auth UI, logout.
    ============================================================ */
+
+/**
+ * Initialize authentication UI on page load.
+ * This is the entry point for auth-related setup.
+ * Calls checkUserLoginStatus() and sets up event listeners.
+ *
+ * @returns {Promise<void>}
+ */
+async function initializeAuthUI() {
+  console.log('[PaBa] 🔐 Initializing authentication UI...');
+
+  try {
+    // Check current user session
+    await checkUserLoginStatus();
+
+    // Setup logout button handler
+    if (DOM.btnLogout && !DOM.btnLogout.hasListener) {
+      DOM.btnLogout.addEventListener('click', handleLogout);
+      DOM.btnLogout.hasListener = true;
+      console.log('[PaBa] ✅ Logout button listener attached');
+    }
+
+    // Setup login button handler - redirect to login.html
+    if (DOM.btnLogin && !DOM.btnLogin.hasListener) {
+      DOM.btnLogin.addEventListener('click', () => {
+        console.log('[PaBa] 🔑 Redirecting to login...');
+        window.location.href = 'login.html';
+      });
+      DOM.btnLogin.hasListener = true;
+      console.log('[PaBa] ✅ Login button listener attached');
+    }
+
+    console.log('[PaBa] ✅ Auth UI initialization complete');
+  } catch (error) {
+    console.error('[PaBa] ❌ Error initializing auth UI:', error);
+  }
+}
 
 /**
  * Check user login status and update UI accordingly.
@@ -262,10 +335,15 @@ async function checkUserLoginStatus() {
  * Update UI to reflect current authentication status.
  * Show Login button if not authenticated.
  * Show Logout button + email if authenticated.
+ *
+ * @returns {void}
  */
 function updateUIForAuthStatus() {
   if (!DOM.btnLogin || !DOM.btnLogout || !DOM.userEmailDisplay) {
     console.warn('[PaBa] ⚠️  Auth UI elements not found in DOM');
+    console.warn('     btnLogin:', !!DOM.btnLogin);
+    console.warn('     btnLogout:', !!DOM.btnLogout);
+    console.warn('     userEmailDisplay:', !!DOM.userEmailDisplay);
     return;
   }
 
@@ -276,7 +354,7 @@ function updateUIForAuthStatus() {
     DOM.userEmailDisplay.hidden = false;
     DOM.userEmailDisplay.textContent = state.userEmail || 'User';
 
-    console.log('[PaBa] 👤 Showing logout button for:', state.userEmail);
+    console.log('[PaBa] 👤 Updated UI: Showing logout button for:', state.userEmail);
   } else {
     // User is not logged in: show login, hide logout + email
     DOM.btnLogin.hidden = false;
@@ -284,23 +362,26 @@ function updateUIForAuthStatus() {
     DOM.userEmailDisplay.hidden = true;
     DOM.userEmailDisplay.textContent = '';
 
-    console.log('[PaBa] 🔑 Showing login button');
+    console.log('[PaBa] 🔑 Updated UI: Showing login button');
   }
 }
 
 /**
  * Handle logout action.
  * Calls signOut() from auth.js which redirects to login.html.
+ *
+ * @returns {Promise<void>}
  */
 async function handleLogout() {
-  console.log('[PaBa] 👋 Logging out user...');
+  console.log('[PaBa] 👋 Logout action triggered...');
 
   if (!confirm('Yakin ingin keluar dari akun?')) {
-    console.log('[PaBa] Logout dibatalkan user');
+    console.log('[PaBa] ℹ️  Logout dibatalkan user');
     return;
   }
 
   try {
+    console.log('[PaBa] 🔄 Calling signOut()...');
     await signOut();
     // signOut() in auth.js will redirect to login.html
     console.log('[PaBa] ✅ Logout successful');
@@ -1167,7 +1248,7 @@ function registerEventListeners() {
    Sequence: init Supabase → register listeners → fetch data
    ============================================================ */
 async function initApp() {
-  console.log('[PaBa] Initializing application...');
+  console.log('[PaBa] 🚀 Initializing application...');
 
   // Step 0: Load saved bookmark state from localStorage.
   loadSavedMaterialsFromStorage();
@@ -1177,20 +1258,22 @@ async function initApp() {
   //         an error in the sidebar and we stop here.
   const supabaseReady = initSupabase();
   if (!supabaseReady) {
-    console.warn('[PaBa] Initialization stopped due to Supabase config error.');
+    console.warn('[PaBa] ⚠️  Initialization stopped due to Supabase config error.');
     return;
   }
 
   // Step 2: Attach all event listeners.
   registerEventListeners();
 
-  // Step 3: Check user login status and fetch materials (parallel)
+  // Step 3: Initialize authentication UI (check session + setup handlers)
+  await initializeAuthUI();
+
+  // Step 4: Check user login status and fetch materials (parallel)
   await Promise.all([
-    checkUserLoginStatus(),
     fetchMaterials(),
   ]);
 
-  console.log('[PaBa] Initialization complete.');
+  console.log('[PaBa] ✅ Initialization complete.');
 }
 
 // DOMContentLoaded fires after HTML is fully parsed but before

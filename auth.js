@@ -366,6 +366,201 @@ async function getCurrentSession() {
 
 /**
  * ============================================================
+ * GET CURRENT USER
+ * ============================================================
+ * 
+ * Mendapatkan user yang sedang login.
+ * Lebih reliable daripada checkUserStatus() untuk cek user saat init.
+ * 
+ * @returns {Promise<{user: Object|null, session: Object|null}>}
+ */
+async function getCurrentUser() {
+  try {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) {
+      console.log('[PaBa] ℹ️  No current user (error: ' + error.message + ')');
+      return {
+        user: null,
+        session: null,
+      };
+    }
+
+    if (!data?.user) {
+      console.log('[PaBa] ℹ️  No current user');
+      return {
+        user: null,
+        session: null,
+      };
+    }
+
+    console.log('[PaBa] ✅ Current user:', data.user.email);
+    
+    // Get session info juga
+    const session = await getCurrentSession();
+
+    return {
+      user: data.user,
+      session: session,
+    };
+  } catch (error) {
+    console.error('[PaBa] ❌ Get Current User Exception:', error.message);
+    return {
+      user: null,
+      session: null,
+    };
+  }
+}
+
+/**
+ * ============================================================
+ * CHECK IF EMAIL IS VERIFIED
+ * ============================================================
+ * 
+ * Mengecek apakah email user sudah diverifikasi.
+ * Diperlukan sebelum user bisa login (tergantung Supabase config).
+ * 
+ * @returns {Promise<boolean>} true jika verified, false jika belum
+ */
+async function isEmailVerified() {
+  try {
+    const { user } = await getCurrentUser();
+
+    if (!user) {
+      console.log('[PaBa] ℹ️  No user, cannot check email verification');
+      return false;
+    }
+
+    // Cek user_metadata atau email_confirmed_at
+    const isVerified = user.email_confirmed_at !== null;
+    
+    console.log('[PaBa] 📧 Email verification status:', isVerified ? 'verified' : 'not verified');
+    console.log('     Email:', user.email);
+    console.log('     Confirmed at:', user.email_confirmed_at || 'never');
+
+    return isVerified;
+  } catch (error) {
+    console.error('[PaBa] ❌ Check Email Verification Exception:', error.message);
+    return false;
+  }
+}
+
+/**
+ * ============================================================
+ * HANDLE EMAIL VERIFICATION REDIRECT
+ * ============================================================
+ * 
+ * Dipanggil dari verify-email.html setelah user klik link verifikasi.
+ * URL akan berisi #token_type=email&type=email&token=XXX
+ * 
+ * Supabase automatically exchanges token untuk create session.
+ * Function ini handle UI feedback dan redirect.
+ * 
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+async function handleEmailVerificationRedirect() {
+  try {
+    console.log('[PaBa] 🔐 Handling email verification redirect...');
+    console.log('[PaBa] 📍 Current URL:', window.location.href);
+
+    // Tunggu sebentar untuk Supabase process token
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Check apakah session sudah created (Supabase handle otomatis)
+    const { user, session } = await getCurrentUser();
+
+    if (!user || !session) {
+      const errorMsg = 'Email verification gagal. Token mungkin expired.';
+      console.error('[PaBa] ❌', errorMsg);
+      
+      return {
+        success: false,
+        message: errorMsg,
+      };
+    }
+
+    // Check email verified
+    const verified = await isEmailVerified();
+
+    if (!verified) {
+      const warningMsg = '⚠️ Email belum terverifikasi. Coba lagi atau hubungi support.';
+      console.warn('[PaBa]', warningMsg);
+      
+      return {
+        success: false,
+        message: warningMsg,
+      };
+    }
+
+    const successMsg = '✅ Email berhasil diverifikasi! Redirecting...';
+    console.log('[PaBa]', successMsg);
+    console.log('     User:', user.email);
+    console.log('     Session created');
+
+    // Redirect ke index.html dengan delay
+    setTimeout(() => {
+      console.log('[PaBa] 📍 Redirecting to index.html...');
+      window.location.href = 'index.html';
+    }, 1500);
+
+    return {
+      success: true,
+      message: successMsg,
+    };
+  } catch (error) {
+    const errorMsg = error.message || 'Terjadi kesalahan saat memproses verifikasi email';
+    console.error('[PaBa] ❌ Email Verification Exception:', errorMsg);
+    console.error('     Stack:', error.stack);
+
+    return {
+      success: false,
+      message: errorMsg,
+    };
+  }
+}
+
+/**
+ * ============================================================
+ * SETUP EMAIL VERIFICATION LISTENER
+ * ============================================================
+ * 
+ * Listen untuk email verification auth state changes.
+ * Triggered saat user verifikasi email dari link di email.
+ * 
+ * @param {Function} callback - Callback when verification changes
+ * @returns {Object|null} Subscription object
+ */
+function setupEmailVerificationListener(callback) {
+  try {
+    console.log('[PaBa] 📡 Setting up email verification listener...');
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(`[PaBa] 🔐 Auth event: ${event}`);
+
+        // Email verification events
+        if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
+          console.log('[PaBa] ✅ Email verified!');
+          callback('email_verified', session.user);
+        } else if (event === 'SIGNED_OUT') {
+          console.log('[PaBa] 🚪 User signed out');
+          callback('signed_out', null);
+        } else if (event === 'USER_UPDATED') {
+          console.log('[PaBa] 🔄 User updated');
+          callback('user_updated', session?.user);
+        }
+      }
+    );
+
+    return subscription;
+  } catch (error) {
+    console.error('[PaBa] ❌ Email Verification Listener Error:', error.message);
+    return null;
+  }
+}
+
+/**
+ * ============================================================
  * SIGN OUT — Logout
  * ============================================================
  * 
@@ -449,6 +644,10 @@ export {
   signInWithPassword,
   checkUserStatus,
   getCurrentSession,
+  getCurrentUser,
+  isEmailVerified,
+  handleEmailVerificationRedirect,
+  setupEmailVerificationListener,
   signOut,
   onAuthStateChange,
 };
