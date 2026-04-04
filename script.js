@@ -35,6 +35,7 @@
 /* ============================================================
    IMPORTS — Module Functions
    ============================================================ */
+import { supabase } from './supabase.js';
 import { checkUserStatus, signOut } from './auth.js';
 import {
   toggleBookmark as toggleBookmarkDb,
@@ -142,38 +143,31 @@ const DOM = {
 
 /* ============================================================
    04. SUPABASE CLIENT INITIALIZATION
-   The CDN script (loaded in index.html) exposes the library
-   as window.supabase. We call createClient() to get our
-   project-specific client instance.
+   The supabase.js module already creates and exports the client.
+   We just need to set our local reference to it.
    ============================================================ */
 
 /** @type {import('@supabase/supabase-js').SupabaseClient|null} */
 let supabaseClient = null;
 
 /**
- * Initializes the Supabase client.
- * Validates that credentials have been filled in and that the
- * Supabase SDK is available on the page.
+ * Initializes the Supabase client reference.
+ * Uses the pre-initialized client from supabase.js module.
  *
  * @returns {boolean} true if initialization succeeded, false otherwise.
  */
 function initSupabase() {
-  // Guard: SDK must be loaded from CDN
-  if (typeof window.supabase === 'undefined') {
-    console.error('[PaBa] Supabase SDK not found on window. Check the CDN <script> tag in index.html.');
-    showSidebarState('error', 'Library Supabase gagal dimuat. Periksa koneksi internet Anda.');
+  // supabase is already imported and initialized from supabase.js
+  // Just set our local reference
+  supabaseClient = supabase;
+  
+  if (!supabaseClient) {
+    console.error('[PaBa] ❌ Supabase client tidak tersedia dari supabase.js');
+    showSidebarState('error', 'Gagal menginisialisasi Supabase client.');
     return false;
   }
-
-  // Guard: developer must fill in credentials
-  if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
-    console.warn('[PaBa] Supabase credentials not set. Please edit the CONFIG section in script.js.');
-    showSidebarState('error', 'Konfigurasi Supabase belum diisi. Masukkan URL dan Anon Key di script.js.');
-    return false;
-  }
-
-  // Create the client — exposes .from(), .auth, etc.
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  
+  console.log('[PaBa] ✅ Supabase client siap digunakan');
   return true;
 }
 
