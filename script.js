@@ -192,6 +192,7 @@ function initSupabase() {
 async function fetchMaterials() {
   // Show spinner while request is in flight
   showSidebarState('loading');
+  console.log('[PaBa] ⏳ Sedang memuat materi...');
 
   try {
     console.log('[PaBa] 🔄 Fetching materials from Supabase...');
@@ -232,11 +233,12 @@ async function fetchMaterials() {
       }
 
       console.error('[PaBa] Debug Info:', debugInfo);
+      showSidebarState('error', userMessage);
       throw new Error(userMessage);
     }
 
     if (!data || data.length === 0) {
-      console.log('[PaBa] ℹ️  No materials found');
+      console.log('[PaBa] ℹ️  No materials found - showing empty state');
       showSidebarState('empty');
       return;
     }
@@ -244,16 +246,26 @@ async function fetchMaterials() {
     // Success: Persist to state
     state.materials = data;
     console.log('[PaBa] ✅ Materials loaded:', data.length, 'items');
+    console.log('[PaBa] 📋 Sample:', data[0]?.judul);
 
     // Render the initial sidebar list according to the current tab and search query.
     filterMaterials(DOM.searchInput?.value || '');
+    
+    // Show the list state
+    showSidebarState('list');
 
     await fetchCategories();
 
   } catch (err) {
     console.error('[PaBa] ❌ Failed to fetch materials:', err.message);
     console.error('[PaBa] 📋 Stack:', err.stack);
-    showSidebarState('error', err.message);
+    
+    if (!DOM.sidebarError.hidden) {
+      // Error state already shown by previous error handling
+      return;
+    }
+    
+    showSidebarState('error', '❌ Gagal mengambil data. Silakan segarkan halaman dan coba lagi.');
   }
 }
 
@@ -1089,6 +1101,7 @@ function showSidebarState(stateName, errorMessage) {
   // Update error message text if provided
   if (stateName === 'error' && errorMessage) {
     DOM.sidebarErrorMsg.textContent = errorMessage;
+    console.log('[PaBa] ⚠️  Showing error state:', errorMessage);
   }
 
   // 'empty' reuses the list container but shows an informational message
@@ -1096,11 +1109,25 @@ function showSidebarState(stateName, errorMessage) {
     DOM.materialNav.hidden = false;
     DOM.materiList.innerHTML = `
       <li style="padding: var(--sp-lg); text-align: center;">
-        <p style="color: var(--c-text-muted); font-size: var(--fs-sm);">
-          Belum ada materi tersedia.
+        <p style="color: var(--c-text-muted); font-size: var(--fs-sm); margin-bottom: 0.75rem;">
+          📚 Belum ada materi tersedia.
+        </p>
+        <p style="color: var(--c-text-muted); font-size: 0.75rem; margin: 0;">
+          Materi akan ditampilkan di sini setelah tersedia.
         </p>
       </li>
     `;
+    console.log('[PaBa] ℹ️  Showing empty state');
+  }
+
+  // 'loading' state message
+  if (stateName === 'loading') {
+    console.log('[PaBa] 🔄 Showing loading state');
+  }
+
+  // 'list' state - just show the material list
+  if (stateName === 'list') {
+    console.log('[PaBa] ✅ Showing material list');
   }
 }
 
