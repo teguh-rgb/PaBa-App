@@ -22,7 +22,7 @@
 
 'use strict';
 
-import { getSupabaseClient, isSupabaseReady } from './supabase.js';
+import { supabase } from './supabase.js';
 import { checkUserStatus } from './auth.js';
 
 /**
@@ -50,19 +50,7 @@ async function toggleBookmark(materialId) {
     };
   }
 
-  // Step 1: Cek Supabase ready
-  if (!isSupabaseReady()) {
-    const errorMsg = 'Supabase belum siap. Silakan refresh halaman.';
-    console.error('[PaBa] ❌ Toggle Bookmark Error:', errorMsg);
-    alert(errorMsg);
-    return {
-      success: false,
-      isSaved: null,
-      message: errorMsg,
-    };
-  }
-
-  // Step 2: Check user status (login check)
+  // Step 1: Check user status (login check)
   console.log('[PaBa] 🔑 Mengecek status user...');
   const { isLoggedIn, user } = await checkUserStatus();
 
@@ -81,9 +69,7 @@ async function toggleBookmark(materialId) {
   console.log('[PaBa] ✅ User authenticated:', user.email);
 
   try {
-    const supabase = getSupabaseClient();
-
-    // Step 3: Check if bookmark already exists
+    // Step 2: Check if bookmark already exists
     console.log('[PaBa] 🔍 Mengecek bookmark yang sudah ada...');
 
     const { data: existingBookmark, error: checkError } = await supabase
@@ -181,19 +167,12 @@ async function isBookmarked(materialId) {
     return false;
   }
 
-  if (!isSupabaseReady()) {
-    console.warn('[PaBa] ⚠️  Supabase belum siap');
-    return false;
-  }
-
   try {
     const { isLoggedIn, user } = await checkUserStatus();
 
     if (!isLoggedIn || !user?.id) {
       return false; // User not logged in
     }
-
-    const supabase = getSupabaseClient();
 
     const { data, error } = await supabase
       .from('bookmarks')
@@ -223,11 +202,6 @@ async function isBookmarked(materialId) {
  * @returns {Promise<Array|null>} Array bookmark objects atau null jika error
  */
 async function getUserBookmarks() {
-  if (!isSupabaseReady()) {
-    console.error('[PaBa] ❌ Supabase belum siap');
-    return null;
-  }
-
   try {
     const { isLoggedIn, user } = await checkUserStatus();
 
@@ -235,8 +209,6 @@ async function getUserBookmarks() {
       console.log('[PaBa] ℹ️  User tidak login');
       return [];
     }
-
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 🔄 Mengambil bookmark user...');
 
@@ -283,18 +255,12 @@ async function getUserBookmarks() {
  * @returns {Promise<number|null>} Jumlah bookmark atau null jika error
  */
 async function getBookmarkCount() {
-  if (!isSupabaseReady()) {
-    return null;
-  }
-
   try {
     const { isLoggedIn, user } = await checkUserStatus();
 
     if (!isLoggedIn || !user?.id) {
       return 0;
     }
-
-    const supabase = getSupabaseClient();
 
     const { count, error } = await supabase
       .from('bookmarks')
@@ -327,11 +293,6 @@ async function removeBookmark(materialId) {
     return false;
   }
 
-  if (!isSupabaseReady()) {
-    console.error('[PaBa] ❌ Supabase belum siap');
-    return false;
-  }
-
   try {
     const { isLoggedIn, user } = await checkUserStatus();
 
@@ -339,8 +300,6 @@ async function removeBookmark(materialId) {
       console.error('[PaBa] ❌ User tidak login');
       return false;
     }
-
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 🗑️  Menghapus bookmark material:', materialId);
 
@@ -370,11 +329,6 @@ async function removeBookmark(materialId) {
  * @returns {Promise<boolean>} true jika berhasil
  */
 async function clearAllBookmarks() {
-  if (!isSupabaseReady()) {
-    console.error('[PaBa] ❌ Supabase belum siap');
-    return false;
-  }
-
   try {
     const { isLoggedIn, user } = await checkUserStatus();
 
@@ -388,8 +342,6 @@ async function clearAllBookmarks() {
       console.log('[PaBa] ℹ️  Clear bookmarks dibatalkan user');
       return false;
     }
-
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 🔄 Menghapus semua bookmark...');
 
@@ -423,14 +375,7 @@ async function clearAllBookmarks() {
  * @returns {Object|null} Subscription object
  */
 function subscribeToBookmarkChanges(callback) {
-  if (!isSupabaseReady()) {
-    console.error('[PaBa] ❌ Supabase belum siap');
-    return null;
-  }
-
   try {
-    const supabase = getSupabaseClient();
-
     console.log('[PaBa] 📡 Setting up bookmark changes listener...');
 
     const subscription = supabase

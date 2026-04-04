@@ -35,7 +35,6 @@
 /* ============================================================
    IMPORTS — Module Functions
    ============================================================ */
-import { getSupabaseClient, isSupabaseReady } from './supabase.js';
 import { checkUserStatus, signOut } from './auth.js';
 import {
   toggleBookmark as toggleBookmarkDb,

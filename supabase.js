@@ -1,145 +1,76 @@
 /**
  * ============================================================
- * Supabase Client Initialization
+ * Supabase Client Initialization (ESM)
  * ============================================================
  * 
  * File ini menangani inisialisasi Supabase client dengan
- * proper error handling dan export untuk digunakan di file lain.
+ * ESM imports dari CDN, tanpa memerlukan build tool.
  * 
  * Dokumentasi: https://supabase.com/docs/reference/javascript
  * 
  * ============================================================
  */
 
-'use strict';
+// Import createClient dari Supabase JS SDK (ESM via CDN)
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 /**
  * Konfigurasi Supabase
- * Ganti dengan URL dan Anon Key project Anda dari Supabase Dashboard
- * https://app.supabase.com → Settings → API
+ * Ambil dari Supabase Dashboard: https://app.supabase.com → Settings → API
  */
-const SUPABASE_CONFIG = {
-  // Format: https://xxxxx.supabase.co
-  supabaseUrl: 'https://xeluoexmhsyuthgnqzuw.supabase.co',
-  
-  // Format: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbHVvZXhtaHN5dXRoZ25xenV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTcxNjYsImV4cCI6MjA5MDI5MzE2Nn0.vtO9bZopwgEDA5-hfe3sGKHb3g30XLX9LY_uLBMdFFY',
-};
-
-/** @type {import('@supabase/supabase-js').SupabaseClient|null} */
-let supabaseClient = null;
+const SUPABASE_URL = 'https://xeluoexmhsyuthgnqzuw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlbHVvZXhtaHN5dXRoZ25xenV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MTcxNjYsImV4cCI6MjA5MDI5MzE2Nn0.vtO9bZopwgEDA5-hfe3sGKHb3g30XLX9LY_uLBMdFFY';
 
 /**
- * Memvalidasi konfigurasi Supabase
- * 
- * @returns {boolean} true jika konfigurasi valid
+ * Validasi konfigurasi Supabase
+ * @throws {Error} jika konfigurasi tidak valid
  */
 function validateConfig() {
-  const { supabaseUrl, supabaseAnonKey } = SUPABASE_CONFIG;
-
   // Cek apakah URL sudah diisi
-  if (!supabaseUrl || supabaseUrl.includes('YOUR_SUPABASE_URL')) {
-    console.error('[PaBa] ❌ SUPABASE_URL belum dikonfigurasi. Masukkan URL di supabase.js');
-    return false;
+  if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_URL')) {
+    throw new Error('[PaBa] ❌ SUPABASE_URL belum dikonfigurasi. Masukkan URL di supabase.js');
   }
 
   // Cek apakah URL format valid
-  if (!supabaseUrl.includes('supabase.co')) {
-    console.error('[PaBa] ❌ SUPABASE_URL tidak valid. Format: https://xxxxx.supabase.co');
-    return false;
+  if (!SUPABASE_URL.includes('supabase.co')) {
+    throw new Error('[PaBa] ❌ SUPABASE_URL tidak valid. Format: https://xxxxx.supabase.co');
   }
 
   // Cek apakah Anon Key sudah diisi
-  if (!supabaseAnonKey || supabaseAnonKey.includes('YOUR_SUPABASE_ANON_KEY')) {
-    console.error('[PaBa] ❌ SUPABASE_ANON_KEY belum dikonfigurasi. Masukkan Anon Key di supabase.js');
-    return false;
+  if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY')) {
+    throw new Error('[PaBa] ❌ SUPABASE_ANON_KEY belum dikonfigurasi. Masukkan Anon Key di supabase.js');
   }
 
   // Cek apakah Anon Key format valid (JWT)
-  if (!supabaseAnonKey.startsWith('eyJ')) {
-    console.error('[PaBa] ❌ SUPABASE_ANON_KEY tidak valid. Harusnya format JWT.');
-    return false;
+  if (!SUPABASE_ANON_KEY.startsWith('eyJ')) {
+    throw new Error('[PaBa] ❌ SUPABASE_ANON_KEY tidak valid. Harusnya format JWT.');
   }
 
-  return true;
+  console.log('[PaBa] ✅ Konfigurasi Supabase valid');
+  console.log('[PaBa] 📍 Project URL:', SUPABASE_URL);
 }
 
 /**
- * Inisialisasi Supabase Client
- * Dipanggil sekali saat aplikasi startup
- * 
- * @returns {Promise<boolean>} true jika berhasil, false jika gagal
+ * Inisialisasi dan validasi konfigurasi
  */
-async function initializeSupabase() {
-  // Guard: SDK harus ter-load dari CDN
-  if (typeof window.supabase === 'undefined') {
-    console.error('[PaBa] ❌ Supabase SDK tidak ditemukan. Pastikan <script> tag di index.html.');
-    console.info('      Tambahkan: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');
-    return false;
-  }
-
-  // Guard: Validasi konfigurasi
-  if (!validateConfig()) {
-    console.error('[PaBa] ❌ Konfigurasi Supabase tidak valid.');
-    return false;
-  }
-
-  try {
-    const { supabaseUrl, supabaseAnonKey } = SUPABASE_CONFIG;
-
-    // Inisialisasi client
-    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
-
-    console.log('[PaBa] ✅ Supabase client berhasil diinisialisasi');
-    console.log('[PaBa] 📍 Project URL:', supabaseUrl);
-
-    return true;
-  } catch (error) {
-    console.error('[PaBa] ❌ Gagal menginisialisasi Supabase client:', error.message);
-    return false;
-  }
+try {
+  validateConfig();
+} catch (error) {
+  console.error(error.message);
+  throw error;
 }
 
 /**
- * Mendapatkan instance Supabase client yang sudah diinisialisasi
+ * Export Supabase client yang sudah siap digunakan
  * 
- * Contoh penggunaan:
+ * Penggunaan di file lain:
  * ```
- * const supabase = getSupabaseClient();
+ * import { supabase } from './supabase.js';
+ * 
+ * // Query contoh
  * const { data, error } = await supabase.from('materi').select('*');
  * ```
- * 
- * @returns {import('@supabase/supabase-js').SupabaseClient|null}
  */
-function getSupabaseClient() {
-  if (!supabaseClient) {
-    console.warn('[PaBa] ⚠️  Supabase client belum diinisialisasi. Panggil initializeSupabase() terlebih dahulu.');
-    return null;
-  }
-  return supabaseClient;
-}
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/**
- * Mengecek apakah Supabase client sudah siap digunakan
- * 
- * @returns {boolean} true jika ready, false jika belum
- */
-function isSupabaseReady() {
-  return supabaseClient !== null;
-}
-
-/**
- * Export functions untuk digunakan di file lain
- * 
- * Contoh:
- * import { initializeSupabase, getSupabaseClient } from './supabase.js';
- * 
- * atau dalam Vanilla JS:
- * const { initializeSupabase, getSupabaseClient } = supabaseModule;
- */
-export {
-  SUPABASE_CONFIG,
-  initializeSupabase,
-  getSupabaseClient,
-  isSupabaseReady,
-};
+console.log('[PaBa] ✅ Supabase client berhasil diinisialisasi');

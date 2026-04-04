@@ -16,7 +16,7 @@
 
 'use strict';
 
-import { getSupabaseClient, isSupabaseReady } from './supabase.js';
+import { supabase } from './supabase.js';
 
 /**
  * ============================================================
@@ -68,20 +68,7 @@ async function signUp(email, password) {
     };
   }
 
-  // Cek Supabase client
-  if (!isSupabaseReady()) {
-    const errorMsg = '[PaBa] Supabase belum diinisialisasi. Silakan refresh halaman.';
-    console.error('❌', errorMsg);
-    alert('Gagal koneksi ke server. Silakan refresh halaman.');
-    return {
-      success: false,
-      user: null,
-      message: errorMsg,
-    };
-  }
-
   try {
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 🔄 Sedang mendaftarkan user:', email);
 
@@ -172,22 +159,11 @@ async function signInWithPassword(email, password) {
     };
   }
 
-  // Cek Supabase client
-  if (!isSupabaseReady()) {
-    const errorMsg = '[PaBa] Supabase belum diinisialisasi. Silakan refresh halaman.';
-    console.error('❌', errorMsg);
-    alert('Gagal koneksi ke server. Silakan refresh halaman.');
-    return {
-      success: false,
-      session: null,
-      message: errorMsg,
-    };
-  }
-
   try {
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 🔄 Sedang login:', email);
+    console.log('[PaBa] 🌐 Current URL:', window.location.origin);
+    console.log('[PaBa] 🔐 Attempting authentication with Supabase...');
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -197,18 +173,27 @@ async function signInWithPassword(email, password) {
     // Handle error dari Supabase
     if (error) {
       let errorMsg = error.message || 'Gagal login. Coba lagi.';
+      let debugInfo = '';
 
       // Mapping error message untuk user-friendly
       if (error.message.includes('Invalid login credentials')) {
         errorMsg = 'Email atau password salah';
       } else if (error.message.includes('Email not confirmed')) {
         errorMsg = 'Email belum diverifikasi. Cek email Anda.';
+      } else if (error.message.includes('CORS')) {
+        errorMsg = 'Masalah koneksi (CORS). Pastikan Site URL di Supabase sesuai dengan URL aplikasi Anda.';
+        debugInfo = '\n\nDebug Info:\n' + 
+                    '1. Buka https://app.supabase.com\n' +
+                    '2. Pilih project → Settings → Auth\n' +
+                    '3. Cek "Site URL" dan "Redirect URLs" harus sesuai dengan: ' + window.location.origin;
       }
 
       console.error('[PaBa] ❌ Sign In Error:', errorMsg);
       console.error('     Error Details:', error);
+      console.error('     Error Code:', error.status);
+      console.error('     Error Name:', error.__isAuthError);
 
-      alert(`❌ Login gagal: ${errorMsg}`);
+      alert(`❌ Login gagal: ${errorMsg}${debugInfo}`);
 
       return {
         success: false,
@@ -221,6 +206,7 @@ async function signInWithPassword(email, password) {
     if (!data?.session) {
       const errorMsg = 'Session tidak ditemukan. User mungkin belum diverifikasi.';
       console.error('[PaBa] ❌ Sign In Error:', errorMsg);
+      console.error('     Data received:', data);
       alert(
         '⚠️ Email belum diverifikasi.\n\n' +
         'Cek email Anda untuk link verifikasi, kemudian login kembali.'
@@ -237,13 +223,16 @@ async function signInWithPassword(email, password) {
     console.log('     Email:', data.user.email);
     console.log('     User ID:', data.user.id);
     console.log('     Access Token:', data.session.access_token.substring(0, 20) + '...');
+    console.log('     Token Expiry:', new Date(data.session.expires_at * 1000));
 
     // Show success message
     alert(successMsg + `\n\nSelamat datang, ${data.user.email}!`);
 
     // Redirect ke index.html setelah delay singkat
     console.log('[PaBa] 📍 Redirecting to index.html...');
+    console.log('[PaBa] 🕐 Delay: 500ms');
     setTimeout(() => {
+      console.log('[PaBa] 🚀 Navigating to index.html');
       window.location.href = 'index.html';
     }, 500);
 
@@ -256,6 +245,7 @@ async function signInWithPassword(email, password) {
     const errorMsg = error.message || 'Terjadi kesalahan saat login';
     console.error('[PaBa] ❌ Sign In Exception:', errorMsg);
     console.error('     Stack:', error.stack);
+    console.error('     Error Name:', error.name);
 
     alert(`❌ Kesalahan: ${errorMsg}`);
 
@@ -278,19 +268,7 @@ async function signInWithPassword(email, password) {
  * @returns {Promise<{isLoggedIn: boolean, user: Object|null, message: string}>}
  */
 async function checkUserStatus() {
-  // Cek Supabase client
-  if (!isSupabaseReady()) {
-    const errorMsg = '[PaBa] Supabase belum diinisialisasi.';
-    console.error('❌', errorMsg);
-    return {
-      isLoggedIn: false,
-      user: null,
-      message: errorMsg,
-    };
-  }
-
   try {
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 🔍 Mengecek status user...');
 
@@ -362,13 +340,7 @@ async function checkUserStatus() {
  * @returns {Promise<Object|null>} Session object atau null
  */
 async function getCurrentSession() {
-  if (!isSupabaseReady()) {
-    console.error('[PaBa] ❌ Supabase belum diinisialisasi');
-    return null;
-  }
-
   try {
-    const supabase = getSupabaseClient();
 
     const { data, error } = await supabase.auth.getSession();
 
@@ -402,14 +374,7 @@ async function getCurrentSession() {
  * @returns {Promise<boolean>} true jika berhasil, false jika gagal
  */
 async function signOut() {
-  if (!isSupabaseReady()) {
-    console.error('[PaBa] ❌ Supabase belum diinisialisasi');
-    alert('Gagal logout. Silakan refresh halaman.');
-    return false;
-  }
-
   try {
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 🔄 Sedang logout...');
 
@@ -451,13 +416,7 @@ async function signOut() {
  * @returns {Object} Subscription object dengan method unsubscribe()
  */
 function onAuthStateChange(callback) {
-  if (!isSupabaseReady()) {
-    console.error('[PaBa] ❌ Supabase belum diinisialisasi');
-    return null;
-  }
-
   try {
-    const supabase = getSupabaseClient();
 
     console.log('[PaBa] 📡 Setting up auth state listener...');
 

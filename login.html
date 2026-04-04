@@ -330,12 +330,17 @@
 
   </div>
 
-  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js" type="module"></script>
   <script src="auth.js" type="module"></script>
   <script type="module">
     import { signInWithPassword, signUp } from './auth.js';
+
+    // DEBUG INFO
+    console.log('[PaBa] 📍 Login page loaded');
+    console.log('[PaBa] 🌐 Current Origin:', window.location.origin);
+    console.log('[PaBa] 🔗 Current URL:', window.location.href);
+    console.log('[PaBa] 📄 Protocol:', window.location.protocol);
 
     const signinForm = document.getElementById('signin-form');
     const signupForm = document.getElementById('signup-form');
@@ -344,6 +349,7 @@
      * Switch between login and signup tabs
      */
     window.switchTab = function (tab) {
+      console.log('[PaBa] 📑 Switching to tab:', tab);
       document.querySelectorAll('.auth-tab').forEach((el) => {
         el.classList.toggle('active', el.dataset.tab === tab);
       });
@@ -367,17 +373,24 @@
      */
     signinForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      console.log('[PaBa] 🔐 Sign In form submitted');
 
       const email = document.getElementById('signin-email').value.trim();
       const password = document.getElementById('signin-password').value;
+
+      console.log('[PaBa] 📧 Email:', email);
+      console.log('[PaBa] 🔐 Password length:', password.length);
 
       const signinBtn = document.getElementById('signin-btn');
       signinBtn.disabled = true;
       signinBtn.textContent = '🔄 Sedang login...';
 
       try {
+        console.log('[PaBa] 🌐 Initiating sign in with Supabase...');
         await signInWithPassword(email, password);
         // Jika redirect, script akan berhenti. Jika tidak, atur ulang button.
+      } catch (err) {
+        console.error('[PaBa] ❌ Unexpected signin error:', err);
       } finally {
         signinBtn.disabled = false;
         signinBtn.textContent = 'Login';
@@ -389,13 +402,18 @@
      */
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      console.log('[PaBa] 📝 Sign Up form submitted');
 
       const email = document.getElementById('signup-email').value.trim();
       const password = document.getElementById('signup-password').value;
       const passwordConfirm = document.getElementById('signup-password-confirm').value;
 
+      console.log('[PaBa] 📧 Email:', email);
+      console.log('[PaBa] 🔐 Password length:', password.length);
+
       // Validasi password match
       if (password !== passwordConfirm) {
+        console.warn('[PaBa] ⚠️ Password mismatch');
         alert('❌ Password tidak cocok');
         return;
       }
@@ -405,6 +423,7 @@
       signupBtn.textContent = '🔄 Sedang mendaftar...';
 
       try {
+        console.log('[PaBa] 🌐 Initiating sign up with Supabase...');
         const result = await signUp(email, password);
         if (result.success) {
           // Clear form
@@ -412,11 +431,15 @@
           // Bisa auto-switch ke signin tab
           // window.switchTab('signin');
         }
+      } catch (err) {
+        console.error('[PaBa] ❌ Unexpected signup error:', err);
       } finally {
         signupBtn.disabled = false;
         signupBtn.textContent = 'Daftar';
       }
     });
+
+    console.log('[PaBa] ✅ Login page scripts loaded successfully');
   </script>
 
 </body>
