@@ -68,7 +68,7 @@ Panduan lengkap untuk debug mengapa materi tidak muncul di PaBa.
 
 **Jika tidak ada data:**
 - Go to: [SQL Insert Guide](SQL_INSERT_GUIDE.md)
-- Copy query dari [INSERT_MATERI_DATA.sql](INSERT_MATERI_DATA.sql)
+- Copy query dari [SQL_QUICK_REFERENCE.md](SQL_QUICK_REFERENCE.md)
 - Run di SQL Editor
 
 ---
@@ -97,7 +97,7 @@ Baca: [RLS_POLICY_SETUP_GUIDE.md](RLS_POLICY_SETUP_GUIDE.md) - bagian "TABEL: ma
 ### ✅ STEP 5: Check Supabase Credentials di script.js
 
 **Lakukan:**
-1. Buka file [script.js](script.js) di text editor
+1. Buka file [script.js](../../script.js) di text editor
 2. Cari bagian "CONFIGURATION" di line ~45
 3. Lihat:
 ```javascript
@@ -178,7 +178,7 @@ CREATE TABLE materi (
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```
-3. Then insert 5 data dari [INSERT_MATERI_DATA.sql](INSERT_MATERI_DATA.sql)
+3. Then insert 5 data dari [SQL_QUICK_REFERENCE.md](SQL_QUICK_REFERENCE.md)
 
 ---
 
@@ -253,7 +253,7 @@ Untuk debug lebih cepat, share:
 
 | # | Issue | Solution |
 |---|-------|----------|
-| 1 | Data tidak di-insert | Run INSERT_MATERI_DATA.sql |
+| 1 | Data tidak di-insert | Jalankan query dari SQL_QUICK_REFERENCE.md |
 | 2 | RLS deny access | Enable public read policy |
 | 3 | Wrong credentials | Copy from Supabase Settings → API |
 | 4 | No local server | Run `python -m http.server 8000` |

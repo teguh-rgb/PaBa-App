@@ -14,7 +14,7 @@
 
 ### Ringkas: 5 Data Materi
 
-Semua data sudah di siapkan dalam file [INSERT_MATERI_DATA.sql](INSERT_MATERI_DATA.sql).
+Semua query insert untuk 5 materi tersedia di [SQL_QUICK_REFERENCE.md](SQL_QUICK_REFERENCE.md).
 
 Berikut adalah 5 data yang akan diinsert:
 
@@ -65,7 +65,7 @@ VALUES (
 
 ### Step 3: Copy & Paste SQL
 
-1. Buka file [INSERT_MATERI_DATA.sql](INSERT_MATERI_DATA.sql)
+1. Buka [SQL_QUICK_REFERENCE.md](SQL_QUICK_REFERENCE.md)
 2. Copy seluruh query (atau copy per query)
 3. Paste ke SQL Editor di Supabase
 
@@ -313,7 +313,7 @@ SELECT id FROM materi LIMIT 1;
 - [ ] 1. Buka https://app.supabase.com
 - [ ] 2. Login & pilih project PaBa
 - [ ] 3. Buka SQL Editor
-- [ ] 4. Copy query dari [INSERT_MATERI_DATA.sql](INSERT_MATERI_DATA.sql)
+- [ ] 4. Copy query dari [SQL_QUICK_REFERENCE.md](SQL_QUICK_REFERENCE.md)
 - [ ] 5. Paste ke SQL Editor
 - [ ] 6. Click "RUN" atau Ctrl+Enter
 - [ ] 7. Tunggu "Query executed successfully"
@@ -349,9 +349,9 @@ SELECT id FROM materi LIMIT 1;
 
 ## 📚 Reference
 
-- File SQL: [INSERT_MATERI_DATA.sql](INSERT_MATERI_DATA.sql)
-- Code Implementation: [script.js](script.js) - fungsi `fetchMaterials()` & `showSidebarState()`
-- Error Handling Guide: [COMPLETE_IMPLEMENTATION_GUIDE.md](COMPLETE_IMPLEMENTATION_GUIDE.md)
+- Query SQL: [SQL_QUICK_REFERENCE.md](SQL_QUICK_REFERENCE.md)
+- Code Implementation: [script.js](../../script.js) - fungsi `fetchMaterials()` & `showSidebarState()`
+- Error Handling & Policies: [RLS_POLICY_SETUP_GUIDE.md](RLS_POLICY_SETUP_GUIDE.md)
 
 ---
 

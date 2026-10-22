@@ -8,7 +8,7 @@ Gunakan query di bawah langsung di Supabase SQL Editor.
 
 ### Option 1: Copy Sekaligus (Recommended)
 
-Buka file [INSERT_MATERI_DATA.sql](INSERT_MATERI_DATA.sql) dan copy seluruh isinya.
+Salin query di bawah dan jalankan di Supabase SQL Editor.
 
 ### Option 2: Copy Per Query
 

@@ -16,7 +16,7 @@
 
 ### 1. Setup Database
 
-Copy-paste script dari [bookmarks-setup.sql](bookmarks-setup.sql) ke Supabase SQL Editor:
+Script setup SQL tidak tersedia di repo ini. Untuk mengatur policy tabel bookmarks, ikuti [panduan RLS](RLS_POLICY_SETUP_GUIDE.md).
 
 ```
 Supabase Dashboard → SQL Editor → New Query → Paste & Execute
@@ -64,7 +64,7 @@ CREATE TABLE bookmarks (
 
 ### RLS Policies
 
-Semua policy sudah built-in di `bookmarks-setup.sql`:
+Policy untuk akses bookmarks milik pengguna dijelaskan di [panduan RLS](RLS_POLICY_SETUP_GUIDE.md):
 
 - ✅ Users can view **their own** bookmarks
 - ✅ Users can insert bookmarks for **themselves**
@@ -505,7 +505,7 @@ toggleBookmark(Number(materialId));
 
 **Solusi:**
 1. Buka Supabase Dashboard
-2. SQL Editor → Copy dari `bookmarks-setup.sql`
+2. SQL Editor → Terapkan policy bookmarks dari [panduan RLS](RLS_POLICY_SETUP_GUIDE.md)
 3. Execute script
 4. Verify table exists di Table Editor
 
@@ -589,7 +589,7 @@ LIMIT 10;
 
 ## ✅ Checklist
 
-- [ ] ✅ Run `bookmarks-setup.sql` di Supabase
+- [ ] ✅ Terapkan policy bookmarks dari [panduan RLS](RLS_POLICY_SETUP_GUIDE.md)
 - [ ] ✅ Verify table & policies di Supabase Dashboard
 - [ ] ✅ Import `bookmarks.js` di script
 - [ ] ✅ Update bookmark button handler

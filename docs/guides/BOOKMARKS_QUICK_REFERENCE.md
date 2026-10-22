@@ -5,9 +5,8 @@
 | File | Purpose |
 |------|---------|
 | **bookmarks.js** | 7 fungsi bookmark operations |
-| **bookmarks-setup.sql** | Database schema & RLS policies |
+| **RLS_POLICY_SETUP_GUIDE.md** | Panduan policy akses bookmarks |
 | **BOOKMARKS_GUIDE.md** | Dokumentasi lengkap |
-| **script-bookmarks-integration.js** | Contoh integrasi ke script.js |
 
 ---
 
@@ -20,7 +19,7 @@ Supabase Dashboard
   ↓
 SQL Editor → New Query
   ↓
-Copy-paste dari bookmarks-setup.sql
+Ikuti SQL policy bookmarks di `RLS_POLICY_SETUP_GUIDE.md`.
   ↓
 Execute ▶
 ```
@@ -139,7 +138,7 @@ bookmarks (
 ## 🔄 Migrasi dari LocalStorage
 
 ```javascript
-// 1. Run bookmarks-setup.sql
+// 1. Apply bookmark policies from RLS_POLICY_SETUP_GUIDE.md
 
 // 2. Old code (localStorage):
 // ❌ localStorage.setItem('paba_bookmarks', JSON.stringify(data));
@@ -154,7 +153,7 @@ bookmarks (
 
 ## ✅ Implementation Checklist
 
-- [ ] Run `bookmarks-setup.sql` di Supabase
+- [ ] Terapkan policy bookmarks dari `RLS_POLICY_SETUP_GUIDE.md` di Supabase
 - [ ] Import `bookmarks.js` di script.js
 - [ ] Replace localStorage bookmark code
 - [ ] Update bookmark button event handler
@@ -186,7 +185,7 @@ bookmarks (
 
 **Error: "relation 'bookmarks' does not exist"**
 - SQL setup belum dijalankan
-- Run `bookmarks-setup.sql` di Supabase dashboard
+- Terapkan policy bookmarks dari `RLS_POLICY_SETUP_GUIDE.md` di Supabase dashboard
 
 **Bookmarks tidak muncul di tab**
 - Gunakan `getUserBookmarks()` untuk load
