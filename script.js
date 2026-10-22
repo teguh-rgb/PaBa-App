@@ -88,6 +88,9 @@ const state = {
   /** @type {boolean} Whether the OpenDyslexic font is currently active */
   isDyslexicFont: false,
 
+  /** @type {boolean} Whether reading focus mode is currently active */
+  isFocusMode: false,
+
   /** @type {boolean} Whether user is authenticated */
   isLoggedIn: false,
 
@@ -122,6 +125,7 @@ const DOM = {
 
   // ── Controls ───────────────────────────────────────────────
   btnFontToggle:    document.getElementById('btn-font-toggle'),
+  btnFocusToggle:   document.getElementById('btn-focus-toggle'),
   btnModeNormal:    document.getElementById('btn-mode-normal'),
   btnModeGenz:      document.getElementById('btn-mode-genz'),
   btnBookmark:      document.getElementById('btn-bookmark'),
@@ -135,6 +139,9 @@ const DOM = {
   // ── Tabs ────────────────────────────────────────────────────
   tabAll:           document.getElementById('tab-all'),
   tabSaved:         document.getElementById('tab-saved'),
+  navLibrary:       document.getElementById('nav-library'),
+  navReader:        document.getElementById('nav-reader'),
+  navSaved:         document.getElementById('nav-saved'),
 
   // ── Toast ──────────────────────────────────────────────────
   toast:            document.getElementById('toast'),
@@ -166,9 +173,24 @@ function initSupabase() {
     showSidebarState('error', 'Gagal menginisialisasi Supabase client.');
     return false;
   }
-  
+
   console.log('[PaBa] ✅ Supabase client siap digunakan');
   return true;
+}
+
+function createIcon(name) {
+  const paths = {
+    bookmark: '<path d="M6 3h12v18l-6-3.5L6 21V3Z"/>',
+    bookmarkFilled: '<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/>',
+  };
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 24 24');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.setAttribute('focusable', 'false');
+  icon.classList.add('ui-icon');
+  if (name === 'bookmark') icon.classList.add('ui-icon--outline');
+  icon.innerHTML = paths[name];
+  return icon;
 }
 
 
@@ -209,20 +231,20 @@ async function fetchMaterials() {
       let debugInfo = '';
 
       if (error.code === 'PGRST116' || error.message?.includes('not found')) {
-        userMessage = '❌ Tabel materi tidak ditemukan di database.';
+        userMessage = 'Tabel materi tidak ditemukan di database.';
         debugInfo = 'Table "materi" does not exist. Please check Supabase schema.';
       } else if (error.message?.includes('permission') || error.code === 'PGRST109') {
-        userMessage = '❌ Akses ditolak. Periksa RLS policy di Supabase dashboard.';
+        userMessage = 'Akses ditolak. Periksa RLS policy di Supabase dashboard.';
         debugInfo = 'RLS Policy Error: Check table "materi" RLS policies in Supabase dashboard.\n' +
                     'Table should allow public SELECT or add appropriate RLS policies.';
       } else if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-        userMessage = '❌ Autentikasi diperlukan. Silakan login terlebih dahulu.';
+        userMessage = 'Autentikasi diperlukan. Silakan login terlebih dahulu.';
         debugInfo = 'Authentication error: User session may have expired.';
       } else if (error.message?.includes('CORS') || error.message?.includes('Network')) {
-        userMessage = '❌ Gagal terhubung ke server. Periksa koneksi internet Anda.';
+        userMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
         debugInfo = 'Network/CORS Error: Check Site URL in Supabase settings.';
       } else {
-        userMessage = `❌ Gagal memuat materi: ${error.message}`;
+        userMessage = `Gagal memuat materi: ${error.message}`;
         debugInfo = error.message;
       }
 
@@ -259,7 +281,7 @@ async function fetchMaterials() {
       return;
     }
     
-    showSidebarState('error', '❌ Gagal mengambil data. Silakan segarkan halaman dan coba lagi.');
+    showSidebarState('error', 'Gagal mengambil data. Silakan segarkan halaman dan coba lagi.');
   }
 }
 
@@ -393,7 +415,7 @@ async function handleLogout() {
     console.log('[PaBa] ✅ Logout successful');
   } catch (error) {
     console.error('[PaBa] ❌ Logout error:', error);
-    alert('❌ Gagal logout. Coba lagi.');
+    alert('Gagal logout. Coba lagi.');
   }
 }
 
@@ -411,7 +433,7 @@ async function ensureUserLoggedIn() {
 
   // User not logged in - show friendly alert
   alert(
-    '🔐 Untuk menyimpan bookmark, silakan login terlebih dahulu.\n\nAnda akan diarahkan ke halaman login.'
+    'Untuk menyimpan bookmark, silakan login terlebih dahulu.\n\nAnda akan diarahkan ke halaman login.'
   );
 
   // Redirect to login.html
@@ -441,34 +463,52 @@ function renderMaterialList(materials) {
 
   materials.forEach((item) => {
     const li = document.createElement('li');
-
-    const btn = document.createElement('button');
+    const card = document.createElement('article');
     const isBookmarked = isMaterialBookmarked(item.id);
+    const category = String(item.kategori || 'Bahan bacaan').trim();
+    const content = String(item.konten_asli || item.konten_genz || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const excerpt = content.slice(0, 150);
 
-    btn.className = 'materi-item';
-    btn.type = 'button';
-    btn.dataset.id = String(item.id);
+    card.className = 'material-card';
+    const categoryLabel = document.createElement('p');
+    categoryLabel.className = 'material-card__category';
+    categoryLabel.textContent = category;
 
-    if (isBookmarked) {
-      const icon = document.createElement('span');
-      icon.className = 'materi-item__bookmark-icon';
-      icon.setAttribute('aria-hidden', 'true');
-      icon.textContent = '★';
-      btn.appendChild(icon);
-    }
+    const titleButton = document.createElement('button');
+    titleButton.className = 'materi-item';
+    titleButton.type = 'button';
+    titleButton.dataset.id = String(item.id);
+    titleButton.textContent = item.judul;
+    titleButton.setAttribute('aria-current', item.id === state.activeMaterialId ? 'page' : 'false');
+    titleButton.setAttribute('aria-label', `Baca materi: ${item.judul}`);
+    titleButton.addEventListener('click', () => handleMaterialSelect(item.id));
 
-    btn.appendChild(document.createTextNode(item.judul));
+    const excerptText = document.createElement('p');
+    excerptText.className = 'material-card__excerpt';
+    excerptText.textContent = excerpt ? `${excerpt}${content.length > 150 ? '…' : ''}` : 'Buka materi ini untuk mulai membaca.';
 
-    const isActive = item.id === state.activeMaterialId;
-    btn.classList.toggle('materi-item--active', isActive);
-    btn.setAttribute('aria-current', isActive ? 'page' : 'false');
+    const actions = document.createElement('div');
+    actions.className = 'material-card__actions';
+    const openButton = document.createElement('button');
+    openButton.className = 'material-card__open';
+    openButton.type = 'button';
+    openButton.textContent = 'Buka bacaan →';
+    openButton.setAttribute('aria-label', `Buka bacaan: ${item.judul}`);
+    openButton.addEventListener('click', () => handleMaterialSelect(item.id));
 
-    // Descriptive label for screen readers
-    btn.setAttribute('aria-label', `Baca materi: ${item.judul}`);
+    const bookmarkButton = document.createElement('button');
+    bookmarkButton.className = 'bookmark-btn material-card__bookmark';
+    bookmarkButton.type = 'button';
+    bookmarkButton.dataset.materi = JSON.stringify(item);
+    bookmarkButton.setAttribute('aria-pressed', String(isBookmarked));
+    bookmarkButton.setAttribute('aria-label', isBookmarked ? `Hapus ${item.judul} dari koleksi tersimpan` : `Simpan ${item.judul}`);
+    bookmarkButton.appendChild(createIcon(isBookmarked ? 'bookmarkFilled' : 'bookmark'));
 
-    btn.addEventListener('click', () => handleMaterialSelect(item.id));
-
-    li.appendChild(btn);
+    actions.append(openButton, bookmarkButton);
+    card.append(categoryLabel, titleButton, excerptText, actions);
+    li.appendChild(card);
     fragment.appendChild(li);
   });
 
@@ -483,6 +523,18 @@ function loadSavedMaterialsFromStorage() {
   // Bookmarks now loaded from database via isBookmarked() and getUserBookmarks()
   // This function kept for backward compatibility / startup logic
   console.log('[PaBa] 📦 Bookmark system ready (using Supabase database)');
+}
+
+async function loadSavedMaterialsFromDatabase() {
+  if (!state.isLoggedIn) return;
+
+  const bookmarks = await getUserBookmarks();
+  state.savedBookmarks = bookmarks || [];
+  state.savedMaterialIds = new Set(
+    state.savedBookmarks
+      .map((bookmark) => Number(bookmark.material_id))
+      .filter(Number.isFinite)
+  );
 }
 
 /**
@@ -576,10 +628,15 @@ async function renderBookmarks() {
 
   DOM.welcomeState?.setAttribute('hidden', '');
   DOM.contentView?.setAttribute('hidden', '');
+  DOM.materialNav.hidden = true;
+  document.body.classList.remove('reading-view');
+  setActiveNavigation(DOM.navSaved);
 
   try {
     // Fetch bookmarks from database
     const bookmarks = await getUserBookmarks();
+    state.savedBookmarks = bookmarks || [];
+    state.savedMaterialIds = new Set(state.savedBookmarks.map((item) => item.material_id));
 
     if (!bookmarks || bookmarks.length === 0) {
       console.log('[PaBa] ℹ️  No bookmarks found');
@@ -595,9 +652,6 @@ async function renderBookmarks() {
     }
 
     // Update state with bookmark IDs for quick lookup
-    state.savedBookmarks = bookmarks;
-    state.savedMaterialIds = new Set(bookmarks.map((item) => item.material_id));
-
     console.log('[PaBa] ✅ Loaded', bookmarks.length, 'bookmarks');
 
     // Transform bookmark objects to material format for card rendering
@@ -626,7 +680,7 @@ async function renderBookmarks() {
         <button type="button" class="back-to-all-btn">Kembali ke Beranda</button>
       </div>
       <div class="saved-materials-empty">
-        <p>❌ Gagal memuat bookmark. Coba lagi nanti.</p>
+        <p>Gagal memuat bookmark. Coba lagi nanti.</p>
       </div>
     `;
   }
@@ -642,6 +696,9 @@ function showAllMaterials() {
   DOM.contentView?.toggleAttribute('hidden', state.activeMaterialId === null);
 
   state.activeMaterialId = null;
+  DOM.materialNav.hidden = false;
+  document.body.classList.remove('reading-view');
+  setActiveNavigation(DOM.navLibrary);
   updateBookmarkButton();
   if (DOM.welcomeState) DOM.welcomeState.removeAttribute('hidden');
   if (DOM.contentView) DOM.contentView.setAttribute('hidden', '');
@@ -678,7 +735,10 @@ function updateBookmarkButton() {
 
   DOM.btnBookmark.classList.toggle('bookmark-btn--active', isSaved);
   DOM.btnBookmark.setAttribute('aria-pressed', String(isSaved));
-  DOM.btnBookmark.textContent = isSaved ? '★ Disimpan' : '☆ Simpan';
+  DOM.btnBookmark.replaceChildren(
+    createIcon(isSaved ? 'bookmarkFilled' : 'bookmark'),
+    document.createTextNode(isSaved ? ' Disimpan' : ' Simpan')
+  );
   DOM.btnBookmark.setAttribute('aria-label', isSaved ? 'Hapus bookmark materi ini' : 'Simpan materi ini');
 }
 
@@ -863,6 +923,9 @@ function renderContent(material) {
   // Transition: hide welcome, show content
   DOM.welcomeState.setAttribute('hidden', '');
   DOM.contentView.removeAttribute('hidden');
+  DOM.materialNav.hidden = true;
+  document.body.classList.add('reading-view');
+  setActiveNavigation(DOM.navReader);
 
   // Force a CSS animation replay by briefly removing & re-adding the element.
   // This provides visual feedback that content has changed on mode switch.
@@ -963,9 +1026,22 @@ function escapeHtml(text) {
 function syncModeBadge() {
   const isGenz = state.mode === 'genz';
 
-  DOM.contentBadge.textContent  = isGenz ? 'Mode Gen-Z ✨' : 'Mode Normal';
+  DOM.contentBadge.textContent  = isGenz ? 'Mode Gen-Z' : 'Mode Normal';
   DOM.contentBadge.className    = `mode-badge mode-badge--${isGenz ? 'genz' : 'normal'}`;
   DOM.contentBadge.setAttribute('aria-label', `Mode saat ini: ${isGenz ? 'Gen-Z' : 'Normal'}`);
+}
+
+function setActiveNavigation(activeLink) {
+  [DOM.navLibrary, DOM.navReader, DOM.navSaved].forEach((link) => {
+    if (!link) return;
+    const isActive = link === activeLink;
+    link.classList.toggle('primary-nav__link--active', isActive);
+    if (isActive) {
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.removeAttribute('aria-current');
+    }
+  });
 }
 
 
@@ -1005,6 +1081,17 @@ function handleMaterialSelect(id) {
   displayMateri(material);
 }
 
+function handleFocusToggle() {
+  state.isFocusMode = !state.isFocusMode;
+  document.body.classList.toggle('focus-mode', state.isFocusMode);
+  DOM.btnFocusToggle.setAttribute('aria-pressed', String(state.isFocusMode));
+  DOM.btnFocusToggle.setAttribute(
+    'aria-label',
+    state.isFocusMode ? 'Nonaktifkan mode fokus membaca' : 'Aktifkan mode fokus membaca'
+  );
+  showToast(state.isFocusMode ? 'Mode fokus diaktifkan' : 'Mode fokus dinonaktifkan');
+}
+
 /**
  * Toggles OpenDyslexic font mode on/off.
  * Reflects the state in the button's aria-pressed attribute,
@@ -1030,8 +1117,8 @@ function handleFontToggle() {
   // Non-intrusive feedback via toast
   showToast(
     state.isDyslexicFont
-      ? '🔤 Font Disleksia Diaktifkan'
-      : '🔤 Font Normal Diaktifkan'
+      ? 'Font Disleksia diaktifkan'
+      : 'Font normal diaktifkan'
   );
 }
 
@@ -1066,8 +1153,8 @@ function handleModeSwitch(newMode) {
   // Feedback
   showToast(
     isGenz
-      ? '✨ Mode Gen-Z Aktif — Bahasa lebih santai!'
-      : '📖 Mode Normal Aktif'
+      ? 'Mode Gen-Z aktif — bahasa lebih santai!'
+      : 'Mode normal aktif'
   );
 }
 
@@ -1104,7 +1191,7 @@ function showSidebarState(stateName, errorMessage) {
     DOM.materiList.innerHTML = `
       <li style="padding: var(--sp-lg); text-align: center;">
         <p style="color: var(--c-text-muted); font-size: var(--fs-sm); margin-bottom: 0.75rem;">
-          📚 Belum ada materi tersedia.
+          Belum ada materi tersedia.
         </p>
         <p style="color: var(--c-text-muted); font-size: 0.75rem; margin: 0;">
           Materi akan ditampilkan di sini setelah tersedia.
@@ -1155,6 +1242,7 @@ function showToast(message, duration = 2800) {
 function registerEventListeners() {
   // ── Accessibility Controls ─────────────────────────────────
   DOM.btnFontToggle.addEventListener('click', handleFontToggle);
+  DOM.btnFocusToggle?.addEventListener('click', handleFocusToggle);
 
   // Language mode buttons
   DOM.btnModeNormal.addEventListener('click', () => handleModeSwitch('normal'));
@@ -1215,18 +1303,18 @@ function registerEventListeners() {
       }
 
       clickedBookmark.disabled = true;
-      clickedBookmark.textContent = '⏳ Menyimpan...';
+      clickedBookmark.textContent = 'Menyimpan...';
 
       const added = await toggleBookmark(material);
 
       clickedBookmark.disabled = false;
 
       if (added === true) {
-        showToast('★ Materi disimpan.');
+        showToast('Materi disimpan.');
       } else if (added === false) {
-        showToast('🗑️ Bookmark dibatalkan.');
+        showToast('Bookmark dibatalkan.');
       } else {
-        showToast('❌ Gagal mengubah bookmark.');
+        showToast('Gagal mengubah bookmark.');
       }
 
       updateBookmarkButton();
@@ -1234,10 +1322,38 @@ function registerEventListeners() {
     })();
   });
 
-  DOM.tabAll?.addEventListener('click', () => handleTabSwitch('all'));
+  DOM.tabAll?.addEventListener('click', () => {
+    handleTabSwitch('all');
+    showAllMaterials();
+  });
   DOM.tabSaved?.addEventListener('click', async () => {
     handleTabSwitch('saved');
     await renderBookmarks();
+  });
+
+  DOM.navLibrary?.addEventListener('click', (event) => {
+    event.preventDefault();
+    handleTabSwitch('all');
+    showAllMaterials();
+    DOM.welcomeState?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  DOM.navReader?.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (state.activeMaterialId === null) {
+      showToast('Pilih bacaan dari perpustakaan untuk mulai membaca.');
+      DOM.materialNav?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    setActiveNavigation(DOM.navReader);
+    DOM.contentView?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  DOM.navSaved?.addEventListener('click', async (event) => {
+    event.preventDefault();
+    handleTabSwitch('saved');
+    await renderBookmarks();
+    DOM.mainContent.querySelector('#saved-materials-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   // ── User Auth Controls ─────────────────────────────────────
@@ -1289,7 +1405,10 @@ async function initApp() {
   // Step 3: Initialize authentication UI (check session + setup handlers)
   await initializeAuthUI();
 
-  // Step 4: Check user login status and fetch materials (parallel)
+  // Step 4: Load bookmarks before rendering cards so saved state is accurate.
+  await loadSavedMaterialsFromDatabase();
+
+  // Step 5: Fetch materials for the library.
   await Promise.all([
     fetchMaterials(),
   ]);

@@ -57,7 +57,7 @@ async function toggleBookmark(materialId) {
   if (!isLoggedIn || !user?.id) {
     const errorMsg = 'Anda harus login untuk menyimpan bookmark';
     console.error('[PaBa] ❌ Toggle Bookmark Error:', errorMsg);
-    alert('❌ ' + errorMsg);
+    alert(errorMsg);
     return {
       success: false,
       isSaved: null,
@@ -141,7 +141,7 @@ async function toggleBookmark(materialId) {
       userMsg = 'Bookmark sudah ada';
     }
 
-    alert('❌ ' + userMsg);
+    alert(userMsg);
 
     return {
       success: false,
@@ -353,12 +353,12 @@ async function clearAllBookmarks() {
     if (error) throw error;
 
     console.log('[PaBa] ✅ Semua bookmark berhasil dihapus');
-    alert('✅ Semua bookmark berhasil dihapus');
+    alert('Semua bookmark berhasil dihapus');
     return true;
   } catch (error) {
     const errorMsg = error.message || 'Gagal menghapus bookmark';
     console.error('[PaBa] ❌ Clear Bookmarks Error:', errorMsg);
-    alert('❌ ' + errorMsg);
+    alert(errorMsg);
     return false;
   }
 }

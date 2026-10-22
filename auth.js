@@ -86,7 +86,7 @@ async function signUp(email, password) {
       console.error('[PaBa] ❌ Sign Up Error:', errorMsg);
       console.error('     Error Details:', error);
 
-      alert(`❌ Gagal mendaftar: ${errorMsg}`);
+      alert(`Gagal mendaftar: ${errorMsg}`);
 
       return {
         success: false,
@@ -107,7 +107,7 @@ async function signUp(email, password) {
       };
     }
 
-    const successMsg = `✅ Pendaftaran berhasil! Cek email Anda untuk verifikasi.`;
+    const successMsg = 'Pendaftaran berhasil! Cek email Anda untuk verifikasi.';
     console.log('[PaBa]', successMsg);
     console.log('     Email:', data.user.email);
     console.log('     User ID:', data.user.id);
@@ -124,7 +124,7 @@ async function signUp(email, password) {
     console.error('[PaBa] ❌ Sign Up Exception:', errorMsg);
     console.error('     Stack:', error.stack);
 
-    alert(`❌ Kesalahan: ${errorMsg}`);
+    alert(`Kesalahan: ${errorMsg}`);
 
     return {
       success: false,
@@ -193,7 +193,7 @@ async function signInWithPassword(email, password) {
       console.error('     Error Code:', error.status);
       console.error('     Error Name:', error.__isAuthError);
 
-      alert(`❌ Login gagal: ${errorMsg}${debugInfo}`);
+      alert(`Login gagal: ${errorMsg}${debugInfo}`);
 
       return {
         success: false,
@@ -208,7 +208,7 @@ async function signInWithPassword(email, password) {
       console.error('[PaBa] ❌ Sign In Error:', errorMsg);
       console.error('     Data received:', data);
       alert(
-        '⚠️ Email belum diverifikasi.\n\n' +
+        'Email belum diverifikasi.\n\n' +
         'Cek email Anda untuk link verifikasi, kemudian login kembali.'
       );
       return {
@@ -218,7 +218,7 @@ async function signInWithPassword(email, password) {
       };
     }
 
-    const successMsg = `✅ Login berhasil!`;
+    const successMsg = 'Login berhasil!';
     console.log('[PaBa]', successMsg);
     console.log('     Email:', data.user.email);
     console.log('     User ID:', data.user.id);
@@ -247,7 +247,7 @@ async function signInWithPassword(email, password) {
     console.error('     Stack:', error.stack);
     console.error('     Error Name:', error.name);
 
-    alert(`❌ Kesalahan: ${errorMsg}`);
+    alert(`Kesalahan: ${errorMsg}`);
 
     return {
       success: false,
@@ -578,12 +578,12 @@ async function signOut() {
     if (error) {
       const errorMsg = error.message || 'Gagal logout';
       console.error('[PaBa] ❌ Sign Out Error:', errorMsg);
-      alert(`❌ Gagal logout: ${errorMsg}`);
+      alert(`Gagal logout: ${errorMsg}`);
       return false;
     }
 
     console.log('[PaBa] ✅ Logout berhasil');
-    alert('✅ Logout berhasil.');
+    alert('Logout berhasil.');
 
     // Redirect ke halaman login atau home
     setTimeout(() => {
@@ -594,7 +594,7 @@ async function signOut() {
   } catch (error) {
     const errorMsg = error.message || 'Terjadi kesalahan saat logout';
     console.error('[PaBa] ❌ Sign Out Exception:', errorMsg);
-    alert(`❌ Kesalahan: ${errorMsg}`);
+    alert(`Kesalahan: ${errorMsg}`);
     return false;
   }
 }
