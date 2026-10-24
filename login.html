@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PaBa – Pahami Bacaan: Login & Registrasi" />
+  <meta name="theme-color" content="#14422D" />
+
+  <title>PaBa — Login</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    :root {
+      --c-accent: #14422D;
+      --c-bg: #F8F9FF;
+      --c-text-primary: #121C2A;
+      --c-text-muted: #66716B;
+      --c-border: #D9E3F6;
+      --c-error: #C0392B;
+      --c-focus: #904D00;
+      --sp-md: 1rem;
+      --sp-lg: 1.5rem;
+      --sp-xl: 2rem;
+      --r-md: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      font-size: 16px;
+    }
+
+    body {
+      font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', sans-serif;
+      background-color: var(--c-bg);
+      color: var(--c-text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--sp-lg);
+    }
+
+    .auth-container {
+      width: 100%;
+      max-width: 780px;
+      background: white;
+      border: 1px solid rgba(18, 28, 42, 0.04);
+      border-radius: 14px;
+      padding: clamp(24px, 5vw, 52px);
+      box-shadow: 0 4px 12px rgba(18, 28, 42, 0.08);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: var(--sp-xl);
+    }
+
+    .auth-logo {
+      display: grid;
+      width: 56px;
+      height: 56px;
+      place-items: center;
+      margin: 0 auto var(--sp-md);
+      border-radius: 12px;
+      background: #eff4ff;
+      color: var(--c-accent);
+      font-size: 3rem;
+    }
+
+    .auth-logo svg {
+      width: 30px;
+      height: 30px;
+      fill: currentColor;
+    }
+
+    .auth-feedback {
+      margin-top: 12px;
+      color: var(--c-error);
+      font-size: 0.875rem;
+    }
+
+    .auth-feedback--success {
+      color: var(--c-accent);
+    }
+
+    .auth-title {
+      font-family: 'Newsreader', Georgia, serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 500;
+      color: var(--c-accent);
+      margin-bottom: var(--sp-md);
+    }
+
+    .auth-subtitle {
+      font-size: 0.875rem;
+      color: var(--c-text-muted);
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: var(--sp-md);
+      margin-bottom: var(--sp-xl);
+      border-bottom: 2px solid var(--c-border);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: var(--sp-md);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--c-text-muted);
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s ease;
+      margin-bottom: -2px;
+    }
+
+    .auth-tab:hover {
+      color: var(--c-text-primary);
+    }
+
+    .auth-tab.active {
+      color: var(--c-accent);
+      border-bottom-color: var(--c-accent);
+    }
+
+    .auth-form {
+      display: none;
+    }
+
+    .auth-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: var(--sp-lg);
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--c-text-primary);
+    }
+
+    input[type="email"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-family: inherit;
+      border: 2px solid var(--c-border);
+      border-radius: 6px;
+      transition: border-color 0.2s ease;
+    }
+
+    input[type="email"]:focus,
+    input[type="password"]:focus {
+      outline: none;
+      border-color: var(--c-focus);
+      box-shadow: 0 0 0 3px rgba(20, 66, 45, 0.12);
+    }
+
+    .form-help {
+      font-size: 0.75rem;
+      color: var(--c-text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .auth-button {
+      width: 100%;
+      padding: 0.875rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      background-color: var(--c-accent);
+      color: white;
+      border: none;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      margin-top: var(--sp-md);
+    }
+
+    .auth-button:hover {
+      background-color: #0B3322;
+    }
+
+    .auth-button:active {
+      transform: scale(0.98);
+    }
+
+    .auth-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .auth-footer {
+      text-align: center;
+      font-size: 0.875rem;
+      color: var(--c-text-muted);
+      margin-top: var(--sp-lg);
+    }
+
+    .auth-link {
+      color: var(--c-accent);
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .auth-link:hover {
+      text-decoration: underline;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .info-box {
+      background: #EFF4FF;
+      border-left: 4px solid #904D00;
+      padding: var(--sp-md);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: var(--c-text-primary);
+      margin-bottom: var(--sp-lg);
+    }
+
+    .auth-home-link {
+      margin-top: var(--sp-md);
+      padding: 8px;
+    }
+
+    @media (max-width: 480px) {
+      .auth-container {
+        padding: var(--sp-lg);
+      }
+
+      .auth-title {
+        font-size: 1.25rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-container">
+
+    <!-- Header -->
+    <div class="auth-header">
+      <div class="auth-logo" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 6.2C10.4 5 8.3 4.5 5 4.5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2 3.3 0 5.4.5 7 1.8 1.6-1.3 3.7-1.8 7-1.8 1.1 0 2-.9 2-2v-12c0-1.1-.9-2-2-2-3.3 0-5.4.5-7 1.7Zm-1 13.5c-1.5-.8-3.4-1.2-6-1.2v-12c2.8 0 4.7.4 6 1.3v11.9Zm8-1.2c-2.6 0-4.5.4-6 1.2V7.8c1.3-.9 3.2-1.3 6-1.3v12Z"/></svg></div>
+      <p class="auth-subtitle">PaBa · Paham Baca</p>
+      <h1 class="auth-title">Selamat datang kembali.</h1>
+      <p class="auth-subtitle">Masuk untuk melanjutkan bacaan dan mengakses koleksi tersimpanmu.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-tab="signin">Login</button>
+      <button class="auth-tab" data-tab="signup">Daftar</button>
+    </div>
+
+    <!-- Info Box -->
+    <div class="info-box">
+      Bacaan tersimpan terhubung ke akunmu, jadi kamu dapat membukanya kembali setelah masuk.
+    </div>
+
+    <!-- SIGN IN FORM -->
+    <form id="signin-form" class="auth-form active">
+      <div class="form-group">
+        <label for="signin-email">Email</label>
+        <input
+          id="signin-email"
+          type="email"
+          placeholder="contoh@email.com"
+          autocomplete="email"
+          required
+        />
+        <p class="form-help">Format: user@example.com</p>
+      </div>
+
+      <div class="form-group">
+        <label for="signin-password">Password</label>
+        <input
+          id="signin-password"
+          type="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          required
+        />
+        <p class="form-help">Minimal 6 karakter</p>
+      </div>
+
+      <button type="submit" class="auth-button" id="signin-btn">
+        Login
+      </button>
+      <p id="signin-feedback" class="auth-feedback" role="alert" aria-live="polite" hidden></p>
+
+      <div class="auth-footer">
+        Belum punya akun? 
+        <span class="auth-link" onclick="switchTab('signup')">Daftar di sini</span>
+      </div>
+    </form>
+
+    <!-- SIGN UP FORM -->
+    <form id="signup-form" class="auth-form">
+      <div class="form-group">
+        <label for="signup-email">Email</label>
+        <input
+          id="signup-email"
+          type="email"
+          placeholder="contoh@email.com"
+          autocomplete="email"
+          required
+        />
+        <p class="form-help">Gunakan email yang aktif</p>
+      </div>
+      <div class="form-group">
+        <label for="signup-password">Password</label>
+        <input
+          id="signup-password"
+          type="password"
+          placeholder="••••••••"
+          autocomplete="new-password"
+          minlength="6"
+          required
+        />
+        <p class="form-help">Minimal 6 karakter. Gunakan password yang kuat.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="signup-password-confirm">Konfirmasi Password</label>
+        <input
+          id="signup-password-confirm"
+          type="password"
+          placeholder="••••••••"
+          autocomplete="new-password"
+          minlength="6"
+          required
+        />
+      </div>
+
+      <button type="submit" class="auth-button" id="signup-btn">
+        Daftar
+      </button>
+      <p id="signup-feedback" class="auth-feedback" role="alert" aria-live="polite" hidden></p>
+
+      <div class="auth-footer">
+        Sudah punya akun? 
+        <span class="auth-link" onclick="switchTab('signin')">Login di sini</span>
+      </div>
+    </form>
+
+  </div>
+  <a class="auth-link auth-home-link" href="index.html">← Kembali ke perpustakaan</a>
+
+  <script type="module">
+    import { checkUserStatus, signInWithPassword, signUp } from './auth.js';
+
+    const signinForm = document.getElementById('signin-form');
+    const signupForm = document.getElementById('signup-form');
+
+    /**
+     * Switch between login and signup tabs
+     */
+    window.switchTab = function (tab) {
+      console.log('[PaBa] Switching to tab:', tab);
+      document.querySelectorAll('.auth-tab').forEach((el) => {
+        el.classList.toggle('active', el.dataset.tab === tab);
+      });
+
+      document.querySelectorAll('.auth-form').forEach((el) => {
+        el.classList.toggle('active', el.id === `${tab}-form`);
+      });
+    };
+
+    /**
+     * Tab click handlers
+     */
+    document.querySelectorAll('.auth-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        window.switchTab(tab.dataset.tab);
+      });
+    });
+
+    checkUserStatus().then(({ isLoggedIn }) => {
+      if (isLoggedIn) {
+        window.location.replace(new URL('index.html', window.location.href).toString());
+      }
+    });
+
+    /**
+     * SIGN IN Handler
+     */
+    signinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('[PaBa] Sign In form submitted');
+
+      const email = document.getElementById('signin-email').value.trim();
+      const password = document.getElementById('signin-password').value;
+
+      const signinBtn = document.getElementById('signin-btn');
+      const feedback = document.getElementById('signin-feedback');
+      signinBtn.disabled = true;
+      signinBtn.textContent = 'Sedang login...';
+      feedback.hidden = true;
+      feedback.classList.remove('auth-feedback--success');
+
+      try {
+        const result = await signInWithPassword(email, password);
+        feedback.textContent = result.message;
+        feedback.classList.toggle('auth-feedback--success', result.success);
+        feedback.hidden = false;
+      } catch (err) {
+        console.error('[PaBa] Unexpected sign-in error:', err);
+        feedback.textContent = err.message || 'Gagal login. Coba lagi.';
+        feedback.hidden = false;
+      } finally {
+        signinBtn.disabled = false;
+        signinBtn.textContent = 'Login';
+      }
+    });
+
+    /**
+     * SIGN UP Handler
+     */
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('[PaBa] Sign Up form submitted');
+
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+      const passwordConfirm = document.getElementById('signup-password-confirm').value;
+
+      const feedback = document.getElementById('signup-feedback');
+      feedback.hidden = true;
+      feedback.classList.remove('auth-feedback--success');
+
+      // Validasi password match
+      if (password !== passwordConfirm) {
+        feedback.textContent = 'Password tidak cocok.';
+        feedback.hidden = false;
+        return;
+      }
+
+      const signupBtn = document.getElementById('signup-btn');
+      signupBtn.disabled = true;
+      signupBtn.textContent = 'Sedang mendaftar...';
+
+      try {
+        const result = await signUp(email, password);
+        if (result.success) {
+          signupForm.reset();
+          feedback.classList.add('auth-feedback--success');
+          if (result.session) {
+            feedback.textContent = `${result.message} Mengalihkan ke perpustakaan...`;
+            feedback.hidden = false;
+            window.location.href = new URL('index.html', window.location.href).toString();
+            return;
+          }
+        }
+        feedback.textContent = result.message;
+        feedback.hidden = false;
+      } catch (err) {
+        console.error('[PaBa] Unexpected sign-up error:', err);
+        feedback.textContent = err.message || 'Gagal mendaftar. Coba lagi.';
+        feedback.hidden = false;
+      } finally {
+        signupBtn.disabled = false;
+        signupBtn.textContent = 'Daftar';
+      }
+    });
+
+  </script>
+
+</body>
+</html>

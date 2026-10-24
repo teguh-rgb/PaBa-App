@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PaBa – Pahami Bacaan: Aplikasi membaca ramah disleksia dengan mode bahasa Gen-Z dan font aksesibel." />
+  <meta name="theme-color" content="#14422D" />
+
+  <title>PaBa — Pahami Bacaan</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Main app script (modules: supabase.js, auth.js, bookmarks.js are imported as ESM) -->
+  <script type="module" src="script.js" defer></script>
+</head>
+
+<body>
+
+  <!--
+    SKIP LINK — WCAG 2.4.1 (Bypass Blocks)
+    Allows keyboard/screen-reader users to jump straight to the reading area,
+    skipping the repeated header and sidebar navigation.
+  -->
+  <a href="#main-content" class="skip-link">Lewati ke konten utama</a>
+
+
+  <!-- ======================================================
+       APP HEADER
+       role="banner" is the ARIA landmark for the page header.
+       Contains: brand identity + accessibility controls.
+  ======================================================= -->
+  <header class="app-header" role="banner">
+
+    <!-- Brand / Logo -->
+    <a class="header-brand" href="#library-view" aria-label="PaBa — Perpustakaan">
+      <div class="brand-text">
+        <span class="brand-name">PaBa</span>
+        <span class="brand-tagline">Paham Baca · Jurnal Inklusif</span>
+      </div>
+    </a>
+
+    <nav class="primary-nav" aria-label="Navigasi utama">
+      <a id="nav-library" class="primary-nav__link primary-nav__link--active" href="#library-view" aria-current="page">Perpustakaan</a>
+      <a id="nav-reader" class="primary-nav__link" href="#content-view">Ruang Baca</a>
+      <a id="nav-saved" class="primary-nav__link" href="#saved-materials-section">Koleksi Tersimpan</a>
+      <a class="primary-nav__link" href="#accessibility-guide">Panduan Disleksia</a>
+    </nav>
+
+    <!--
+      Accessibility Controls Toolbar.
+      role="toolbar" groups related controls; aria-label names it for screen readers.
+    -->
+    <div class="header-controls" role="toolbar" aria-label="Kontrol aksesibilitas">
+
+      <!-- ── Font Toggle ──────────────────────────────────
+           aria-pressed reflects the toggled state (on/off).
+           Screen readers announce "Font Disleksia, dimatikan, tombol"
+           and update to "dihidupkan" when active.
+      ─────────────────────────────────────────────────── -->
+      <button
+        id="btn-font-toggle"
+        class="ctrl-btn"
+        type="button"
+        aria-pressed="false"
+        aria-label="Aktifkan font OpenDyslexic untuk kemudahan membaca"
+        title="Aktifkan font ramah disleksia"
+      >
+        <span class="ctrl-btn__icon" aria-hidden="true">Aa</span>
+        <span class="ctrl-btn__label">Teks</span>
+      </button>
+      <button id="btn-focus-toggle" class="ctrl-btn focus-toggle" type="button" aria-pressed="false" aria-label="Aktifkan mode fokus membaca">
+        <span aria-hidden="true">◉</span>
+        <span class="ctrl-btn__label">Fokus</span>
+      </button>
+
+      <!-- ── Language Mode Toggle ─────────────────────────
+           role="group" + aria-labelledby groups the two buttons
+           semantically for screen readers.
+      ─────────────────────────────────────────────────── -->
+      <div
+        class="lang-toggle-wrapper"
+        role="group"
+        aria-labelledby="lang-toggle-label"
+      >
+        <span id="lang-toggle-label" class="lang-toggle__label">Mode Bahasa</span>
+        <div class="lang-toggle-switch">
+          <button
+            id="btn-mode-normal"
+            class="lang-btn lang-btn--active"
+            type="button"
+            aria-pressed="true"
+            data-mode="normal"
+          >Normal</button>
+          <button
+            id="btn-mode-genz"
+            class="lang-btn"
+            type="button"
+            aria-pressed="false"
+            data-mode="genz"
+          >Gen-Z</button>
+        </div>
+      </div>
+
+    </div><!-- /.header-controls -->
+
+    <!-- ── User Auth Controls ─────────────────────────────────
+         Show Login button if not authenticated (Logout hidden).
+         Show Logout button if authenticated (Login hidden).
+         aria-label describes each button's purpose for AT.
+    ─────────────────────────────────────────────────── -->
+    <div class="header-user-controls" role="toolbar" aria-label="Kontrol autentikasi pengguna">
+      <a
+        id="btn-login"
+        href="login.html"
+        class="user-btn user-btn--login"
+        role="button"
+        aria-label="Masuk ke akun Anda"
+      >
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 14a5 5 0 1 1 4.9-6H21v4h-3v3h-3v3h-3.1A5 5 0 0 1 7 14Zm0-3a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>
+        Login
+      </a>
+      <button
+        id="btn-logout"
+        class="user-btn user-btn--logout"
+        type="button"
+        aria-label="Keluar dari akun Anda"
+        hidden
+      >
+        <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 4H4v16h6v-2H6V6h4V4Zm5.6 3.6L14.2 9l2 2H9v2h7.2l-2 2 1.4 1.4L20 12l-4.4-4.4Z"/></svg>
+        Logout
+      </button>
+      <span id="user-email-display" class="user-email-display" hidden></span>
+    </div>
+
+  </header><!-- /.app-header -->
+
+
+  <div class="app-layout">
+    <main id="main-content" class="main-content" role="main" tabindex="-1">
+      <section class="library-tools" aria-label="Pencarian dan filter materi">
+        <div class="library-tools__top">
+          <div class="sidebar-header">
+            <p class="eyebrow">Jurnal baca bebas gangguan</p>
+            <h2 class="sidebar-title">Temukan bacaan</h2>
+            <div class="sidebar-tabs" role="tablist" aria-label="Pilih daftar materi">
+              <button
+                id="tab-all"
+                class="sidebar-tab sidebar-tab--active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+              >
+                Semua Materi
+              </button>
+              <button
+                id="tab-saved"
+                class="sidebar-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+              >
+                Materi Disimpan
+              </button>
+            </div>
+          </div>
+
+          <label class="sidebar-search" for="materi-search">
+            <span class="visually-hidden">Cari materi</span>
+            <span aria-hidden="true">⌕</span>
+            <input
+              id="materi-search"
+              class="sidebar-search__input"
+              type="search"
+              placeholder="Cari judul materi..."
+              autocomplete="off"
+              aria-label="Cari judul materi"
+            />
+          </label>
+        </div>
+        <div id="category-filters" class="category-filters" aria-label="Filter kategori materi"></div>
+      </section>
+
+      <div id="sidebar-loading" class="state-message" aria-live="polite" aria-busy="true" role="status">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Memuat materi...</p>
+      </div>
+
+      <div id="sidebar-error" class="state-message state-message--error" role="alert" hidden>
+        <svg class="ui-icon ui-icon--warning" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3 1.8 21h20.4L12 3Zm0 4.2 6.7 11.8H5.3L12 7.2Zm-1 3.3v4h2v-4h-2Zm0 5.5v2h2v-2h-2Z"/></svg>
+        <p id="sidebar-error-msg">Gagal memuat materi. Coba lagi.</p>
+        <button id="btn-retry" class="retry-btn" type="button">Coba Lagi</button>
+      </div>
+
+      <!-- ── Welcome / Empty State ───────────────────────
+           Shown when no material is selected yet.
+           aria-live="polite" announces when content changes.
+      ─────────────────────────────────────────────────── -->
+      <section id="welcome-state" class="welcome-state" aria-live="polite">
+        <div class="welcome-copy">
+          <p class="eyebrow"><span aria-hidden="true">●</span> Jurnal baca inklusif</p>
+          <h1 class="welcome-title">Selamat membaca dengan lebih nyaman.</h1>
+          <p class="welcome-subtitle">Pilih bacaan yang menarik perhatianmu. Atur tampilan dan bahasa agar membaca terasa lebih ringan.</p>
+        </div>
+        <div class="welcome-note">
+          <span class="welcome-note__icon" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 24 24" focusable="false"><path d="M12 2 14.2 9.8 22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2L12 2Zm0 6.4L10.9 11l-2.6 1 2.6 1 1.1 2.6 1.1-2.6 2.6-1-2.6-1L12 8.4Z"/></svg></span>
+          <span><strong>Ruang baca yang bisa disesuaikan</strong><br />Atur font, jarak, dan bahasa kapan saja.</span>
+        </div>
+      </section>
+
+      <nav id="material-nav" aria-label="Materi bacaan" hidden>
+        <ul id="materi-list" class="materi-list" role="list"></ul>
+      </nav>
+
+      <!-- ── Content View ────────────────────────────────
+           Hidden until a material is selected.
+           <article> is semantically correct for self-contained content.
+      ─────────────────────────────────────────────────── -->
+      <article
+        id="content-view"
+        class="content-view"
+        hidden
+        aria-live="polite"
+      >
+        <header class="content-header">
+          <button type="button" class="back-to-all-btn reader-back-btn">← Kembali ke Perpustakaan</button>
+          <div class="content-meta">
+            <!--
+              Mode badge: visually indicates active language mode.
+              aria-label is updated via JS to stay accurate for AT.
+            -->
+            <span
+              id="content-mode-badge"
+              class="mode-badge mode-badge--normal"
+              aria-label="Mode saat ini: Normal"
+            >Mode Normal</span>
+            <p id="content-mode-status" class="content-mode-status" role="status" hidden></p>
+          </div>
+          <div class="content-actions">
+            <button
+              id="btn-bookmark"
+              class="bookmark-btn"
+              type="button"
+              aria-pressed="false"
+              aria-label="Simpan materi ini"
+            >
+              ☆ Simpan
+            </button>
+          </div>
+          <!-- h2 is correct here: the page h1 is "PaBa" in the header -->
+          <h2 id="content-title" class="content-title"></h2>
+        </header>
+
+        <details class="reading-settings">
+          <summary>Pengaturan tampilan bacaan</summary>
+          <div class="reading-settings__controls">
+            <div class="reading-setting">
+              <label for="reading-font-size">Ukuran teks</label>
+              <div class="reading-setting__range">
+                <input id="reading-font-size" type="range" min="16" max="28" step="1" value="18" />
+                <output id="reading-font-size-value" for="reading-font-size">18 px</output>
+              </div>
+            </div>
+            <div class="reading-setting">
+              <label for="reading-line-height">Jarak antarbaris</label>
+              <select id="reading-line-height">
+                <option value="1.6">Rapat</option>
+                <option value="1.9" selected>Normal</option>
+                <option value="2.2">Lebih lega</option>
+              </select>
+            </div>
+            <div class="reading-setting">
+              <label for="reading-letter-spacing">Jarak antarhuruf</label>
+              <div class="reading-setting__range">
+                <input id="reading-letter-spacing" type="range" min="0" max="0.08" step="0.01" value="0.01" />
+                <output id="reading-letter-spacing-value" for="reading-letter-spacing">0.01 em</output>
+              </div>
+            </div>
+            <button id="btn-reading-settings-reset" class="reading-settings__reset" type="button">
+              Reset pengaturan
+            </button>
+          </div>
+        </details>
+
+        <!--
+          The reading area.
+          Content is injected here via JS (formatted as <p> tags).
+          role="article" adds redundant semantic clarity.
+        -->
+        <div id="content-body" class="content-body" role="article"></div>
+        <div id="content-meme" class="content-meme" aria-live="polite"></div>
+
+      </article><!-- /#content-view -->
+
+      <section id="accessibility-guide" class="accessibility-guide" aria-labelledby="guide-title">
+        <p class="eyebrow">Baca dengan nyaman</p>
+        <h2 id="guide-title">Sesuaikan pengalaman membacamu</h2>
+        <p>Gunakan font ramah disleksia atau pilih mode bahasa yang paling mudah dipahami. Pengaturan bisa diubah kapan saja tanpa meninggalkan bacaan.</p>
+      </section>
+
+    </main><!-- /.main-content -->
+
+  </div><!-- /.app-layout -->
+
+
+  <!-- ======================================================
+       TOAST NOTIFICATION
+       role="status" with aria-live="polite" announces feedback
+       messages (e.g., "Font Disleksia Diaktifkan") to screen readers
+       without stealing focus.
+  ======================================================= -->
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
+
+</body>
+</html>
